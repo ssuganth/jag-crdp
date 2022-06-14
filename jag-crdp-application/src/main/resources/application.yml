@@ -1,0 +1,15 @@
+security:
+  basic-auth:
+    password: ${BASIC_AUTH_PASS}
+    username: ${BASIC_AUTH_USER}
+crdp:
+  host: ${ORDS_HOST}
+  in-file-dir: ${INCOMING_FILE_DIR}
+  out-file-dir: ${OUTGOING_FILE_DIR}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics,prometheus,health
+
