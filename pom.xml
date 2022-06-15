@@ -6,12 +6,12 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.5.8</version>
+        <version>2.5.12</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>ca.bc.gov.open</groupId>
     <artifactId>jag-crdp</artifactId>
-    <version>1.0</version>
+    <version>1.0.0</version>
     <name>jag-crdp</name>
     <description>CRDP Application</description>
     <properties>
@@ -28,7 +28,6 @@
 
     <modules>
         <module>jag-crdp-application</module>
-        <module>crdp-common-models</module>
     </modules>
 
     <build>

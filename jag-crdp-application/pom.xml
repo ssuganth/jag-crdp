@@ -3,16 +3,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.5.12</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <groupId>ca.bc.gov.open</groupId>
+        <artifactId>jag-crdp</artifactId>
+        <version>1.0.0</version>
     </parent>
-    <groupId>ca.bc.gov.open</groupId>
+
     <artifactId>jag-crdp-application</artifactId>
-    <version>1.0</version>
+    <version>1.0.0</version>
     <name>jag-crdp-application</name>
-    <description>jag-crdp-application</description>
     <properties>
         <java.version>11</java.version>
         <log4j2.version>2.17.1</log4j2.version>
@@ -190,12 +188,6 @@
             <artifactId>spring-test</artifactId>
             <version>5.3.14</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>ca.bc.gov.open</groupId>
-            <artifactId>crdp-common-models</artifactId>
-            <version>1.0</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 
