@@ -38,7 +38,8 @@ public class TransmitController {
     private final JavaMailSender emailSender;
 
     @Autowired
-    public TransmitController(JavaMailSender emailSender, RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public TransmitController(
+            JavaMailSender emailSender, RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.emailSender = emailSender;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
@@ -48,8 +49,7 @@ public class TransmitController {
     @ResponsePayload
     @Scheduled(cron = "0 1 1 * * ?")
     private void GenerateIncomingRequestFile() throws JsonProcessingException {
-        UriComponentsBuilder builder =
-                UriComponentsBuilder.fromHttpUrl(host + "incoming-file");
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "incoming-file");
 
         try {
             HttpEntity<GenerateIncomingReqFileResponse> resp =
@@ -89,9 +89,7 @@ public class TransmitController {
         }
     }
 
-    private void processError() {
-
-    }
+    private void processError() {}
 
     // Never being used
     private void DeleteFile(String fileName) throws JsonProcessingException {

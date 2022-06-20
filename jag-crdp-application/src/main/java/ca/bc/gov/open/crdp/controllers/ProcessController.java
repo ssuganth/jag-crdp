@@ -1,6 +1,11 @@
 package ca.bc.gov.open.crdp.controllers;
 
-import java.io.ByteArrayInputStream;
+import ca.bc.gov.open.crdp.exceptions.ORDSException;
+import ca.bc.gov.open.crdp.models.ProcessAuditResponse;
+import ca.bc.gov.open.crdp.models.ProcessStatusResponse;
+import ca.bc.gov.open.crdp.models.RequestSuccessLog;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -10,14 +15,6 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import ca.bc.gov.open.crdp.exceptions.ORDSException;
-import ca.bc.gov.open.crdp.models.GenerateIncomingReqFileResponse;
-import ca.bc.gov.open.crdp.models.ProcessAuditResponse;
-import ca.bc.gov.open.crdp.models.ProcessStatusResponse;
-import ca.bc.gov.open.crdp.models.RequestSuccessLog;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -33,12 +30,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.ws.server.endpoint.annotation.Endpoint;
-import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 @Endpoint
 @Slf4j
@@ -72,7 +63,8 @@ public class ProcessController {
             new TreeMap<String, String>(); // erred folders.
 
     @Autowired
-    public ProcessController(JavaMailSender emailSender, RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public ProcessController(
+            JavaMailSender emailSender, RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.emailSender = emailSender;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
@@ -222,8 +214,7 @@ public class ProcessController {
                             ProcessAuditResponse.class);
             log.info(
                     objectMapper.writeValueAsString(
-                            new RequestSuccessLog(
-                                    "Request Success", "processAuditSvc")));
+                            new RequestSuccessLog("Request Success", "processAuditSvc")));
 
         } catch (ORDSException e) {
             e.printStackTrace();
@@ -246,17 +237,14 @@ public class ProcessController {
                             ProcessStatusResponse.class);
             log.info(
                     objectMapper.writeValueAsString(
-                            new RequestSuccessLog(
-                                    "Request Success", "processStatusSvc")));
+                            new RequestSuccessLog("Request Success", "processStatusSvc")));
 
         } catch (ORDSException e) {
             e.printStackTrace();
         }
     }
 
-    /**
-     * The primary method for the Java service
-     */
+    /** The primary method for the Java service */
     public static final byte[] readFile(String fileName) throws IOException {
         try {
             byte[] data = readFile(new File(fileName));
