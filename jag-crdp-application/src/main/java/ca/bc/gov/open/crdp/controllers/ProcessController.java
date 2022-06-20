@@ -1,9 +1,7 @@
 package ca.bc.gov.open.crdp.controllers;
 
 import ca.bc.gov.open.crdp.exceptions.ORDSException;
-import ca.bc.gov.open.crdp.models.ProcessAuditResponse;
-import ca.bc.gov.open.crdp.models.ProcessStatusResponse;
-import ca.bc.gov.open.crdp.models.RequestSuccessLog;
+import ca.bc.gov.open.crdp.models.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -240,7 +238,119 @@ public class ProcessController {
                             new RequestSuccessLog("Request Success", "processStatusSvc")));
 
         } catch (ORDSException e) {
-            e.printStackTrace();
+            log.error(
+                    objectMapper.writeValueAsString(
+                            new OrdsErrorLog(
+                                    "Error received from ORDS",
+                                    "processStatusSvc",
+                                    e.getMessage(),
+                                    fileName)));
+            throw new ORDSException();
+        }
+    }
+
+    private final void processDocumentsSvc(String folderName, String folderShortName, String processedDate) throws IOException {
+        String[] fileList;
+
+        // Creates a new File instance by converting the given pathname string
+        // into an abstract pathname
+        File f = new File(folderName);
+
+        // Populates the array with names of files and directories
+        fileList = f.list();
+
+        String fileName = null;
+        if (folderShortName.equals("CCs")) {
+            fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_CCs.XML");
+        }
+        else if (folderShortName.equals("Letters")) {
+            fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_Letters.XML");
+        }
+        else {
+            throw new IOException("Unexpected folder short name: " + folderShortName);
+        }
+
+        List<String> pdfs = extractPDFFileNames(folderName);
+
+        UriComponentsBuilder builder =
+                UriComponentsBuilder.fromHttpUrl(host + "process-docs");
+
+        HttpEntity<ProcessDocumentsRequest> payload =
+                new HttpEntity<>(new ProcessDocumentsRequest(processedDate, fileName, pdfs), new HttpHeaders());
+
+        try {
+            HttpEntity<ProcessDocumentsResponse> resp =
+                    restTemplate.exchange(
+                            builder.toUriString(),
+                            HttpMethod.POST,
+                            payload,
+                            ProcessDocumentsResponse.class);
+            log.info(
+                    objectMapper.writeValueAsString(
+                            new RequestSuccessLog("Request Success", "processDocumentsSvc")));
+
+        } catch (ORDSException e) {
+            log.error(
+                    objectMapper.writeValueAsString(
+                            new OrdsErrorLog(
+                                    "Error received from ORDS",
+                                    "processDocumentsSvc",
+                                    e.getMessage(),
+                                    fileName)));
+            throw new ORDSException();
+        }
+    }
+
+    private final void processReportsSvc(String folderName, String folderShortName, String processedDate) {
+
+    }
+
+    /**
+     * The primary method for the Java service
+     */
+    public static final List<String> extractPDFFileNames(String folderName) throws IOException {
+        /**
+         * Purpose of this service is to extract a list of file names from a given folder
+         */
+        List<String> pdfs = new ArrayList<>();
+
+        try {
+            File file = new File(folderName);
+            File[] files = file.listFiles();
+            for(File f: files){
+                if (FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("pdf")) {
+                    pdfs.add(f.getCanonicalPath());
+                }
+            }
+            return pdfs;
+        } catch (Exception e) {
+            throw new IOException(e.getMessage());
+        }
+    }
+
+    /**
+     * The primary method for the Java service
+     */
+    public static final String extractXMLFileName(String[] fileList, String regex) throws IOException {
+        /**
+         * Purpose of this service is to extract a file from a list of file names given a
+         * specific regex.
+         */
+        String result = null;
+        if ( fileList == null || fileList.length == 0 || regex == null ) {
+            throw new IOException("Unsatisfied parameter requirement(s) at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName");
+        }
+        try {
+            for ( int i=0; i < fileList.length; i++ ) {
+                if (Pattern.matches(regex, fileList[i])) {
+                    if ( result != null )
+                        throw new IOException("Multiple files found satisfying regex at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName. Should only be one.");
+                    result = fileList[i];
+                }
+            }
+            return result;
+        } catch (IOException ex) {
+            throw new IOException(ex.getMessage());
         }
     }
 
@@ -369,10 +479,8 @@ public class ProcessController {
     /**
      * processFolder - handles subfolders of folder type 'Processed_yyyy_dd' (e.g. CCs, Letters,
      * etc).
-     *
-     * @throws Exception
      */
-    private static void processFolder(String folderName, String folderShortName, String serviceName)
+    private void processFolder(String folderName, String folderShortName, String serviceName)
             throws Exception {
         // Extract date from Processed folderName to pass service as 'processedDate'.
         Pattern p = Pattern.compile("\\bProcessed_\\w+[-][0-9][0-9][-][0-9][0-9]");
@@ -383,17 +491,25 @@ public class ProcessController {
         }
 
         try {
-            // callService("CRDP.Source.ProcessIncomingFile.Services", serviceName, input);
+            switch (serviceName) {
+                case "ProcessDocuments":
+                    processDocumentsSvc(folderName, folderShortName, processedDate);
+                    break;
+                case "ProcessReports":
+                    processReportsSvc(folderName, folderShortName, processedDate);
+                    break;
+                default:
+            }
 
-            // Add the processed folder and it's target location to the processedFolders map dealt
-            // with at the end of processing.
+            // Add the processed folder and its target location to the processedFolders map
+            // dealt with at the end of processing.
             processedFoldersToMove.put(
                     folderName,
                     inFileDir + "/processed/" + processFolderName + "/" + folderShortName);
 
         } catch (Exception e) {
-            // Add the errored folder path and it's target location to the erroredFolders map dealt
-            // with at the end of processing.
+            // Add the erred folder path and its target location to the erred folders map
+            // dealt with at the end of processing.
             erredFoldersToMove.put(
                     folderName, inFileDir + "/errors/" + processFolderName + "/" + folderShortName);
 
@@ -404,8 +520,6 @@ public class ProcessController {
 
     /**
      * processFile - handles root folder status and audit files.
-     *
-     * @throws Exception
      */
     private void processFile(File file) throws Exception {
         String fileName = null;
