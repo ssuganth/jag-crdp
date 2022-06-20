@@ -6,10 +6,10 @@ crdp:
   host: ${ORDS_HOST}
   in-file-dir: ${INCOMING_FILE_DIR}
   out-file-dir: ${OUTGOING_FILE_DIR}
+  notification-addresses: ${NOTIFICATION_ADDR}
 
 management:
   endpoints:
     web:
       exposure:
         include: metrics,prometheus,health
-

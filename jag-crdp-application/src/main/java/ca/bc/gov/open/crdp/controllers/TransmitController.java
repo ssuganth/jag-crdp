@@ -6,7 +6,6 @@ import ca.bc.gov.open.crdp.models.OrdsErrorLog;
 import ca.bc.gov.open.crdp.models.RequestSuccessLog;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -16,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -35,9 +35,11 @@ public class TransmitController {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final JavaMailSender emailSender;
 
     @Autowired
-    public TransmitController(RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public TransmitController(JavaMailSender emailSender, RestTemplate restTemplate, ObjectMapper objectMapper) {
+        this.emailSender = emailSender;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
@@ -47,7 +49,7 @@ public class TransmitController {
     @Scheduled(cron = "0 1 1 * * ?")
     private void GenerateIncomingRequestFile() throws JsonProcessingException {
         UriComponentsBuilder builder =
-                UriComponentsBuilder.fromHttpUrl(host + "crdp/incoming-file");
+                UriComponentsBuilder.fromHttpUrl(host + "incoming-file");
 
         try {
             HttpEntity<GenerateIncomingReqFileResponse> resp =

@@ -6,3 +6,4 @@ crdp:
   host: http://127.0.0.1/
   in-file-dir: /
   out-file-dir: /
+  notification-addresses: /
