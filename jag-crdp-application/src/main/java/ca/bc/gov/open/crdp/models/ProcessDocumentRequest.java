@@ -5,6 +5,6 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class ProcessDocumentsResponse {
-    private String status;
+public class ProcessDocumentRequest {
+    private byte[] fileContent;
 }

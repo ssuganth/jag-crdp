@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -18,6 +19,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -270,34 +272,63 @@ public class ProcessController {
             throw new IOException("Unexpected folder short name: " + folderShortName);
         }
 
-        List<String> pdfs = extractPDFFileNames(folderName);
-
         UriComponentsBuilder builder =
-                UriComponentsBuilder.fromHttpUrl(host + "process-docs");
+                UriComponentsBuilder.fromHttpUrl(host + "doc/status")
+                        .queryParam("processedDate", processedDate)
+                        .queryParam("fileName", fileName);
 
-        HttpEntity<ProcessDocumentsRequest> payload =
-                new HttpEntity<>(new ProcessDocumentsRequest(processedDate, fileName, pdfs), new HttpHeaders());
-
+        HttpEntity<Map<String, String>> resp = null;
         try {
-            HttpEntity<ProcessDocumentsResponse> resp =
+            resp =
                     restTemplate.exchange(
                             builder.toUriString(),
-                            HttpMethod.POST,
-                            payload,
-                            ProcessDocumentsResponse.class);
+                            HttpMethod.GET,
+                            new HttpEntity<>(new HttpHeaders()),
+                            new ParameterizedTypeReference<>() {});
             log.info(
                     objectMapper.writeValueAsString(
-                            new RequestSuccessLog("Request Success", "processDocumentsSvc")));
+                            new RequestSuccessLog("Request Success", "processDocumentsSvc - GetDocumentProcessStatus")));
 
         } catch (ORDSException e) {
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
                                     "Error received from ORDS",
-                                    "processDocumentsSvc",
+                                    "processDocumentsSvc - GetDocumentProcessStatusRequest",
                                     e.getMessage(),
                                     fileName)));
             throw new ORDSException();
+        }
+
+        if (resp.getBody().get("status").equals("N")) {
+            List<String> pdfs = extractPDFFileNames(folderName);
+            for (String pdf : pdfs) {
+                try {
+                    HttpEntity<Map<String, String>> response =
+                            restTemplate.exchange(
+                                    builder.toUriString(),
+                                    HttpMethod.GET,
+                                    new HttpEntity<>(new HttpHeaders()),
+                                    new ParameterizedTypeReference<>() {});
+                    log.info(
+                            objectMapper.writeValueAsString(
+                                    new RequestSuccessLog("Request Success", "processDocumentsSvc - GetDocumentProcessStatus")));
+                    if (response.getBody().get("resultCd").equals("0")) {
+
+                    }
+                } catch (ORDSException e) {
+                    log.error(
+                            objectMapper.writeValueAsString(
+                                    new OrdsErrorLog(
+                                            "Error received from ORDS",
+                                            "processDocumentsSvc - GetDocumentProcessStatusRequest",
+                                            e.getMessage(),
+                                            fileName)));
+                    throw new ORDSException();
+                }
+            }
+        } else {
+            return;
         }
     }
 
@@ -305,9 +336,6 @@ public class ProcessController {
 
     }
 
-    /**
-     * The primary method for the Java service
-     */
     public static final List<String> extractPDFFileNames(String folderName) throws IOException {
         /**
          * Purpose of this service is to extract a list of file names from a given folder
@@ -328,9 +356,6 @@ public class ProcessController {
         }
     }
 
-    /**
-     * The primary method for the Java service
-     */
     public static final String extractXMLFileName(String[] fileList, String regex) throws IOException {
         /**
          * Purpose of this service is to extract a file from a list of file names given a
@@ -351,17 +376,6 @@ public class ProcessController {
             return result;
         } catch (IOException ex) {
             throw new IOException(ex.getMessage());
-        }
-    }
-
-    /** The primary method for the Java service */
-    public static final byte[] readFile(String fileName) throws IOException {
-        try {
-            byte[] data = readFile(new File(fileName));
-            return data;
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new IOException("Failed to read file: " + fileName);
         }
     }
 

@@ -7,8 +7,7 @@ import java.util.List;
 
 @Data
 @AllArgsConstructor
-public class ProcessDocumentsRequest {
+public class GetDocumentProcessStatusRequest {
     private String processedDate;
     private String xmlFileShortName;
-    private List<String> pdfs;
 }
