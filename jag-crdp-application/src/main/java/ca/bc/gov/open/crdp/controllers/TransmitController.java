@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,9 +48,13 @@ public class TransmitController {
 
     @PayloadRoot(localPart = "generateIncomingRequestFile")
     @ResponsePayload
-    @Scheduled(cron = "0 1 1 * * ?")
+    @Scheduled(cron = "0 * * * * *")
     private void GenerateIncomingRequestFile() throws JsonProcessingException {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "incoming-file");
+        host = "https://dev.jag.gov.bc.ca/ords/devj/ceisords/crdp/v1/";
+        String fileDirectory = "abc";
+        UriComponentsBuilder builder =
+                UriComponentsBuilder.fromHttpUrl(
+                        host + "crdp/incoming-file?fileDirectory=" + fileDirectory);
 
         try {
             HttpEntity<GenerateIncomingReqFileResponse> resp =
@@ -64,14 +69,14 @@ public class TransmitController {
                                     "Request Success", "generateIncomingRequestFile")));
 
             // Error handling
-            if (resp.getBody().getStatus().equals("0")) {
+            if (resp.getBody().getStatus().equals("0") || resp.getBody().getFileName() == null) {
                 processError();
             }
 
             // Create file to outgoing file directory
             File outgoingFile = new File(outFileDir + resp.getBody().getFileName());
             try (FileOutputStream outputStream = new FileOutputStream(outgoingFile)) {
-                outputStream.write(resp.getBody().getFile());
+                outputStream.write(resp.getBody().getFile().getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
                 log.error("Fail to create " + outFileDir + resp.getBody().getFileName());
                 throw e;

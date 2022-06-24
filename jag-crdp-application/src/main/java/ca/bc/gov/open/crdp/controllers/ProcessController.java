@@ -249,7 +249,8 @@ public class ProcessController {
         }
     }
 
-    private final void processDocumentsSvc(String folderName, String folderShortName, String processedDate) throws IOException {
+    private final void processDocumentsSvc(
+            String folderName, String folderShortName, String processedDate) throws IOException {
         String[] fileList;
 
         // Creates a new File instance by converting the given pathname string
@@ -262,21 +263,20 @@ public class ProcessController {
         String fileName = null;
         if (folderShortName.equals("CCs")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_CCs.XML");
-        }
-        else if (folderShortName.equals("Letters")) {
+        } else if (folderShortName.equals("Letters")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_Letters.XML");
-        }
-        else {
+        } else {
             throw new IOException("Unexpected folder short name: " + folderShortName);
         }
 
         List<String> pdfs = extractPDFFileNames(folderName);
 
-        UriComponentsBuilder builder =
-                UriComponentsBuilder.fromHttpUrl(host + "process-docs");
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-docs");
 
         HttpEntity<ProcessDocumentsRequest> payload =
-                new HttpEntity<>(new ProcessDocumentsRequest(processedDate, fileName, pdfs), new HttpHeaders());
+                new HttpEntity<>(
+                        new ProcessDocumentsRequest(processedDate, fileName, pdfs),
+                        new HttpHeaders());
 
         try {
             HttpEntity<ProcessDocumentsResponse> resp =
@@ -301,23 +301,18 @@ public class ProcessController {
         }
     }
 
-    private final void processReportsSvc(String folderName, String folderShortName, String processedDate) {
+    private final void processReportsSvc(
+            String folderName, String folderShortName, String processedDate) {}
 
-    }
-
-    /**
-     * The primary method for the Java service
-     */
+    /** The primary method for the Java service */
     public static final List<String> extractPDFFileNames(String folderName) throws IOException {
-        /**
-         * Purpose of this service is to extract a list of file names from a given folder
-         */
+        /** Purpose of this service is to extract a list of file names from a given folder */
         List<String> pdfs = new ArrayList<>();
 
         try {
             File file = new File(folderName);
             File[] files = file.listFiles();
-            for(File f: files){
+            for (File f : files) {
                 if (FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("pdf")) {
                     pdfs.add(f.getCanonicalPath());
                 }
@@ -328,23 +323,24 @@ public class ProcessController {
         }
     }
 
-    /**
-     * The primary method for the Java service
-     */
-    public static final String extractXMLFileName(String[] fileList, String regex) throws IOException {
+    /** The primary method for the Java service */
+    public static final String extractXMLFileName(String[] fileList, String regex)
+            throws IOException {
         /**
-         * Purpose of this service is to extract a file from a list of file names given a
-         * specific regex.
+         * Purpose of this service is to extract a file from a list of file names given a specific
+         * regex.
          */
         String result = null;
-        if ( fileList == null || fileList.length == 0 || regex == null ) {
-            throw new IOException("Unsatisfied parameter requirement(s) at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName");
+        if (fileList == null || fileList.length == 0 || regex == null) {
+            throw new IOException(
+                    "Unsatisfied parameter requirement(s) at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName");
         }
         try {
-            for ( int i=0; i < fileList.length; i++ ) {
+            for (int i = 0; i < fileList.length; i++) {
                 if (Pattern.matches(regex, fileList[i])) {
-                    if ( result != null )
-                        throw new IOException("Multiple files found satisfying regex at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName. Should only be one.");
+                    if (result != null)
+                        throw new IOException(
+                                "Multiple files found satisfying regex at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName. Should only be one.");
                     result = fileList[i];
                 }
             }
@@ -518,9 +514,7 @@ public class ProcessController {
         }
     }
 
-    /**
-     * processFile - handles root folder status and audit files.
-     */
+    /** processFile - handles root folder status and audit files. */
     private void processFile(File file) throws Exception {
         String fileName = null;
         try {
