@@ -7,11 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -217,7 +214,14 @@ public class ProcessController {
                             new RequestSuccessLog("Request Success", "processAuditSvc")));
 
         } catch (ORDSException e) {
-            e.printStackTrace();
+            log.error(
+                    objectMapper.writeValueAsString(
+                            new OrdsErrorLog(
+                                    "Error received from ORDS",
+                                    "processAuditSvc",
+                                    e.getMessage(),
+                                    fileName)));
+            throw new ORDSException();
         }
     }
 
@@ -251,7 +255,8 @@ public class ProcessController {
         }
     }
 
-    private final void processDocumentsSvc(String folderName, String folderShortName, String processedDate) throws IOException {
+    private final void processDocumentsSvc(
+            String folderName, String folderShortName, String processedDate) throws IOException {
         String[] fileList;
 
         // Creates a new File instance by converting the given pathname string
@@ -260,17 +265,15 @@ public class ProcessController {
 
         // Populates the array with names of files and directories
         fileList = f.list();
-
         String fileName = null;
         if (folderShortName.equals("CCs")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_CCs.XML");
-        }
-        else if (folderShortName.equals("Letters")) {
+        } else if (folderShortName.equals("Letters")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_Letters.XML");
+        } else {
+            saveError("Unexpected folder short name: " + folderShortName);
         }
-        else {
-            throw new IOException("Unexpected folder short name: " + folderShortName);
-        }
+        byte[] ccDocument = readFile(new File(folderName + fileName));
 
         UriComponentsBuilder builder =
                 UriComponentsBuilder.fromHttpUrl(host + "doc/status")
@@ -287,7 +290,9 @@ public class ProcessController {
                             new ParameterizedTypeReference<>() {});
             log.info(
                     objectMapper.writeValueAsString(
-                            new RequestSuccessLog("Request Success", "processDocumentsSvc - GetDocumentProcessStatus")));
+                            new RequestSuccessLog(
+                                    "Request Success",
+                                    "processDocumentsSvc - GetDocumentProcessStatus")));
 
         } catch (ORDSException e) {
             log.error(
@@ -296,56 +301,147 @@ public class ProcessController {
                                     "Error received from ORDS",
                                     "processDocumentsSvc - GetDocumentProcessStatusRequest",
                                     e.getMessage(),
-                                    fileName)));
+                                    fileName + " " + processedDate)));
             throw new ORDSException();
         }
 
+        GuidMapDocument guidMapDocument = new GuidMapDocument("1", new HashMap<>());
         if (resp.getBody().get("status").equals("N")) {
             List<String> pdfs = extractPDFFileNames(folderName);
+            UriComponentsBuilder builder2 = UriComponentsBuilder.fromHttpUrl(host + "doc/save");
             for (String pdf : pdfs) {
+                SavePDFDocumentRequest req = new SavePDFDocumentRequest(readFile(new File(pdf)));
+                HttpEntity<SavePDFDocumentRequest> payload =
+                        new HttpEntity<>(req, new HttpHeaders());
                 try {
-                    HttpEntity<Map<String, String>> response =
+                    HttpEntity<SavePDFDocumentResponse> response =
                             restTemplate.exchange(
-                                    builder.toUriString(),
-                                    HttpMethod.GET,
-                                    new HttpEntity<>(new HttpHeaders()),
-                                    new ParameterizedTypeReference<>() {});
+                                    builder2.toUriString(),
+                                    HttpMethod.POST,
+                                    payload,
+                                    SavePDFDocumentResponse.class);
                     log.info(
                             objectMapper.writeValueAsString(
-                                    new RequestSuccessLog("Request Success", "processDocumentsSvc - GetDocumentProcessStatus")));
-                    if (response.getBody().get("resultCd").equals("0")) {
-
+                                    new RequestSuccessLog(
+                                            "Request Success",
+                                            "processDocumentsSvc - SavePDFDocument")));
+                    if (response.getBody().getResultCd().equals("0")) {
+                        // map file name and guid
+                        guidMapDocument
+                                .getMapping()
+                                .put(
+                                        FilenameUtils.getName(pdf),
+                                        response.getBody().getObjectGuid());
                     }
                 } catch (ORDSException e) {
                     log.error(
                             objectMapper.writeValueAsString(
                                     new OrdsErrorLog(
                                             "Error received from ORDS",
-                                            "processDocumentsSvc - GetDocumentProcessStatusRequest",
+                                            "processDocumentsSvc - SavePDFDocument",
                                             e.getMessage(),
-                                            fileName)));
+                                            req)));
                     throw new ORDSException();
                 }
             }
+
+            if (folderShortName.equals("CCs") || folderShortName.equals("Letters")) {
+                UriComponentsBuilder builder3 = UriComponentsBuilder.fromHttpUrl(host + "doc/xml");
+                ProcessXMLRequest req = new ProcessXMLRequest(ccDocument, guidMapDocument);
+                HttpEntity<ProcessXMLRequest> payload = new HttpEntity<>(req, new HttpHeaders());
+                try {
+                    HttpEntity<Map<String, String>> response =
+                            restTemplate.exchange(
+                                    builder3.toUriString(),
+                                    HttpMethod.POST,
+                                    payload,
+                                    new ParameterizedTypeReference<>() {});
+                    log.info(
+                            objectMapper.writeValueAsString(
+                                    new RequestSuccessLog(
+                                            "Request Success",
+                                            "processDocumentsSvc - ProcessCCs/LettersXML")));
+                } catch (ORDSException e) {
+                    log.error(
+                            objectMapper.writeValueAsString(
+                                    new OrdsErrorLog(
+                                            "Error received from ORDS",
+                                            "processDocumentsSvc - ProcessCCs/LettersXML",
+                                            e.getMessage(),
+                                            req)));
+                    throw new ORDSException();
+                }
+            } else {
+                saveError("Unexpected folder short name: " + folderShortName);
+            }
+
         } else {
             return;
         }
     }
 
-    private final void processReportsSvc(String folderName, String folderShortName, String processedDate) {
+    private final void processReportsSvc(String folderName, String processedDate)
+            throws IOException {
+        List<String> pdfs = extractPDFFileNames(folderName);
+        for (String pdf : pdfs) {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "rpt");
+            ProcessReportRequest req =
+                    new ProcessReportRequest(pdf, processedDate, readFile(new File(pdf)));
+            HttpEntity<ProcessReportRequest> payload = new HttpEntity<>(req, new HttpHeaders());
+            try {
+                HttpEntity<Map<String, String>> response =
+                        restTemplate.exchange(
+                                builder.toUriString(),
+                                HttpMethod.POST,
+                                payload,
+                                new ParameterizedTypeReference<>() {});
+                log.info(
+                        objectMapper.writeValueAsString(
+                                new RequestSuccessLog("Request Success", "processReportSvc")));
+            } catch (ORDSException e) {
+                log.error(
+                        objectMapper.writeValueAsString(
+                                new OrdsErrorLog(
+                                        "Error received from ORDS",
+                                        "processReportSvc",
+                                        e.getMessage(),
+                                        req)));
+                throw new ORDSException();
+            }
+        }
+    }
 
+    private final void saveError(String errMsg) throws JsonProcessingException {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "err/save");
+        SaveErrorRequest req = new SaveErrorRequest(errMsg);
+        HttpEntity<SaveErrorRequest> payload = new HttpEntity<>(req, new HttpHeaders());
+        try {
+            HttpEntity<Map<String, String>> response =
+                    restTemplate.exchange(
+                            builder.toUriString(),
+                            HttpMethod.POST,
+                            payload,
+                            new ParameterizedTypeReference<>() {});
+            log.info(
+                    objectMapper.writeValueAsString(
+                            new RequestSuccessLog("Request Success", "SaveError")));
+        } catch (ORDSException e) {
+            log.error(
+                    objectMapper.writeValueAsString(
+                            new OrdsErrorLog(
+                                    "Error received from ORDS", "SaveError", e.getMessage(), req)));
+            throw new ORDSException();
+        }
     }
 
     public static final List<String> extractPDFFileNames(String folderName) throws IOException {
-        /**
-         * Purpose of this service is to extract a list of file names from a given folder
-         */
+        /** Purpose of this service is to extract a list of file names from a given folder */
         List<String> pdfs = new ArrayList<>();
 
         try {
             File file = new File(folderName);
             File[] files = file.listFiles();
-            for(File f: files){
+            for (File f : files) {
                 if (FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("pdf")) {
                     pdfs.add(f.getCanonicalPath());
                 }
@@ -356,20 +452,23 @@ public class ProcessController {
         }
     }
 
-    public static final String extractXMLFileName(String[] fileList, String regex) throws IOException {
+    public static final String extractXMLFileName(String[] fileList, String regex)
+            throws IOException {
         /**
-         * Purpose of this service is to extract a file from a list of file names given a
-         * specific regex.
+         * Purpose of this service is to extract a file from a list of file names given a specific
+         * regex.
          */
         String result = null;
-        if ( fileList == null || fileList.length == 0 || regex == null ) {
-            throw new IOException("Unsatisfied parameter requirement(s) at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName");
+        if (fileList == null || fileList.length == 0 || regex == null) {
+            throw new IOException(
+                    "Unsatisfied parameter requirement(s) at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName");
         }
         try {
-            for ( int i=0; i < fileList.length; i++ ) {
+            for (int i = 0; i < fileList.length; i++) {
                 if (Pattern.matches(regex, fileList[i])) {
-                    if ( result != null )
-                        throw new IOException("Multiple files found satisfying regex at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName. Should only be one.");
+                    if (result != null)
+                        throw new IOException(
+                                "Multiple files found satisfying regex at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName. Should only be one.");
                     result = fileList[i];
                 }
             }
@@ -460,9 +559,9 @@ public class ProcessController {
         RandomAccessFile f = new RandomAccessFile(file, "r");
         try {
             // Get and check length
-            long longlength = f.length();
-            int length = (int) longlength;
-            if (length != longlength) throw new IOException("File size >= 2 GB");
+            long longLength = f.length();
+            int length = (int) longLength;
+            if (length != longLength) throw new IOException("File size >= 2 GB");
             // Read file and return data
             byte[] data = new byte[length];
             f.readFully(data);
@@ -510,7 +609,8 @@ public class ProcessController {
                     processDocumentsSvc(folderName, folderShortName, processedDate);
                     break;
                 case "ProcessReports":
-                    processReportsSvc(folderName, folderShortName, processedDate);
+                    // folderShortName is not used in processReports
+                    processReportsSvc(folderName, processedDate);
                     break;
                 default:
             }
@@ -527,14 +627,13 @@ public class ProcessController {
             erredFoldersToMove.put(
                     folderName, inFileDir + "/errors/" + processFolderName + "/" + folderShortName);
 
-            // inform parent of error to be sent via email.
+            // inform parent of error to be sent via email, but wM does not do anything sending email
+            // sendErrorNotificationSvc(e.getMessage());
             throw new Exception(e.getMessage());
         }
     }
 
-    /**
-     * processFile - handles root folder status and audit files.
-     */
+    /** processFile - handles root folder status and audit files. */
     private void processFile(File file) throws Exception {
         String fileName = null;
         try {

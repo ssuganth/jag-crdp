@@ -7,6 +7,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class GenerateIncomingReqFileResponse {
     private String status;
+    private String errMsg;
     private String fileName;
     private byte[] file;
 }

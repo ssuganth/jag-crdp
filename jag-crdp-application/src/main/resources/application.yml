@@ -7,6 +7,7 @@ crdp:
   in-file-dir: ${INCOMING_FILE_DIR}
   out-file-dir: ${OUTGOING_FILE_DIR}
   notification-addresses: ${NOTIFICATION_ADDR}
+  smtp-from: ${SMTP_FROM}
 
 management:
   endpoints:

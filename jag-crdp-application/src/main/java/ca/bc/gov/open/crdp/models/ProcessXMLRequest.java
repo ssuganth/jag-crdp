@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class GetDocumentProcessStatusRequest {
-    private String processedDate;
-    private String xmlFileShortName;
+public class ProcessXMLRequest {
+    private byte[] ccDocument;
+    private GuidMapDocument map;
 }
