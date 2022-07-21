@@ -58,9 +58,11 @@ public class TransmitController {
 
     @PayloadRoot(localPart = "generateIncomingRequestFile")
     @ResponsePayload
-    @Scheduled(cron = "0 0 8 ? * Tue") // Every Tuesday at 8 AM
+//    @Scheduled(cron = "0 0 8 ? * Tue") // Every Tuesday at 8 AM
+    @Scheduled(cron = "0/2 * * * * *") // Every 2 sec - for testing purpose
     private void GenerateIncomingRequestFile() throws JsonProcessingException {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "incoming-file");
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "incoming-file")
+                .queryParam("fileDirectory", outFileDir);
 
         try {
             HttpEntity<GenerateIncomingReqFileResponse> resp =
