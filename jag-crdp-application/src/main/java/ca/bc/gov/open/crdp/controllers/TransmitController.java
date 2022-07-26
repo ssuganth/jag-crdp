@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,11 +57,12 @@ public class TransmitController {
 
     @PayloadRoot(localPart = "generateIncomingRequestFile")
     @ResponsePayload
-//    @Scheduled(cron = "0 0 8 ? * Tue") // Every Tuesday at 8 AM
+    //    @Scheduled(cron = "0 0 8 ? * Tue") // Every Tuesday at 8 AM
     @Scheduled(cron = "0/2 * * * * *") // Every 2 sec - for testing purpose
     private void GenerateIncomingRequestFile() throws JsonProcessingException {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "incoming-file")
-                .queryParam("fileDirectory", outFileDir);
+        UriComponentsBuilder builder =
+                UriComponentsBuilder.fromHttpUrl(host + "incoming-file")
+                        .queryParam("fileDirectory", outFileDir);
 
         try {
             HttpEntity<GenerateIncomingReqFileResponse> resp =
@@ -110,8 +110,13 @@ public class TransmitController {
         String additionalInformation = milliFormatter.format(new Date());
         SimpleDateFormat curDtmFormatter = new SimpleDateFormat("MMM-dd-yyyy HH:mm:ss");
         String curDtm = curDtmFormatter.format(new Date());
-        String subjectMsg = "Exception: " + integrationNameMsg +
-                " had error " + errorTypeMsg + " at " + errorTypeMsg;
+        String subjectMsg =
+                "Exception: "
+                        + integrationNameMsg
+                        + " had error "
+                        + errorTypeMsg
+                        + " at "
+                        + errorTypeMsg;
         int notificationFailure = 0;
         int haveVerboseNotification = 0;
         int haveNonVerboseNotification = 0;

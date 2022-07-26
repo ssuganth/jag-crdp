@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
@@ -58,6 +60,8 @@ public class ProcessController {
             new TreeMap<String, String>(); // completed folders.
     private static TreeMap<String, String> erredFoldersToMove =
             new TreeMap<String, String>(); // erred folders.
+
+    DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
 
     @Autowired
     public ProcessController(
@@ -265,13 +269,13 @@ public class ProcessController {
 
         // Populates the array with names of files and directories
         fileList = f.list();
-        String fileName = null;
+        String fileName = "";
         if (folderShortName.equals("CCs")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_CCs.XML");
         } else if (folderShortName.equals("Letters")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_Letters.XML");
         } else {
-            saveError("Unexpected folder short name: " + folderShortName);
+            log.error("Unexpected folder short name: " + folderShortName);
         }
         byte[] ccDocument = readFile(new File(folderName + fileName));
 
@@ -332,6 +336,12 @@ public class ProcessController {
                                 .put(
                                         FilenameUtils.getName(pdf),
                                         response.getBody().getObjectGuid());
+                    } else {
+                        saveError(
+                                response.getBody().getResultMsg(),
+                                dateFormat.format(Calendar.getInstance().getTime()),
+                                fileName,
+                                ccDocument);
                     }
                 } catch (ORDSException e) {
                     log.error(
@@ -345,9 +355,9 @@ public class ProcessController {
                 }
             }
 
-            if (folderShortName.equals("CCs") || folderShortName.equals("Letters")) {
-                UriComponentsBuilder builder3 = UriComponentsBuilder.fromHttpUrl(host + "doc/xml");
-                ProcessXMLRequest req = new ProcessXMLRequest(ccDocument, guidMapDocument);
+            ProcessXMLRequest req = new ProcessXMLRequest(ccDocument, guidMapDocument);
+            if (folderShortName.equals("CCs")) {
+                UriComponentsBuilder builder3 = UriComponentsBuilder.fromHttpUrl(host + "doc/processCCs");
                 HttpEntity<ProcessXMLRequest> payload = new HttpEntity<>(req, new HttpHeaders());
                 try {
                     HttpEntity<Map<String, String>> response =
@@ -360,22 +370,52 @@ public class ProcessController {
                             objectMapper.writeValueAsString(
                                     new RequestSuccessLog(
                                             "Request Success",
-                                            "processDocumentsSvc - ProcessCCs/LettersXML")));
+                                            "processDocumentsSvc - ProcessCCsXML")));
                 } catch (ORDSException e) {
                     log.error(
                             objectMapper.writeValueAsString(
                                     new OrdsErrorLog(
                                             "Error received from ORDS",
-                                            "processDocumentsSvc - ProcessCCs/LettersXML",
+                                            "processDocumentsSvc - ProcessCCsXML",
+                                            e.getMessage(),
+                                            req)));
+                    throw new ORDSException();
+                }
+            } else if (folderShortName.equals("Letters")) {
+                UriComponentsBuilder builder3 = UriComponentsBuilder.fromHttpUrl(host + "doc/processLetters");
+                HttpEntity<ProcessXMLRequest> payload = new HttpEntity<>(req, new HttpHeaders());
+                try {
+                    HttpEntity<Map<String, String>> response =
+                            restTemplate.exchange(
+                                    builder3.toUriString(),
+                                    HttpMethod.POST,
+                                    payload,
+                                    new ParameterizedTypeReference<>() {});
+                    log.info(
+                            objectMapper.writeValueAsString(
+                                    new RequestSuccessLog(
+                                            "Request Success",
+                                            "processDocumentsSvc - ProcessLettersXML")));
+                } catch (ORDSException e) {
+                    log.error(
+                            objectMapper.writeValueAsString(
+                                    new OrdsErrorLog(
+                                            "Error received from ORDS",
+                                            "processDocumentsSvc - ProcessLettersXML",
                                             e.getMessage(),
                                             req)));
                     throw new ORDSException();
                 }
             } else {
-                saveError("Unexpected folder short name: " + folderShortName);
+                saveError(
+                        "Unexpected folder short name: " + folderShortName,
+                        dateFormat.format(Calendar.getInstance().getTime()),
+                        fileName,
+                        ccDocument);
             }
 
         } else {
+            // do nothing
             return;
         }
     }
@@ -411,9 +451,10 @@ public class ProcessController {
         }
     }
 
-    private final void saveError(String errMsg) throws JsonProcessingException {
+    private final void saveError(String errMsg, String date, String fileName, byte[] fileContentXml)
+            throws JsonProcessingException {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "err/save");
-        SaveErrorRequest req = new SaveErrorRequest(errMsg);
+        SaveErrorRequest req = new SaveErrorRequest(errMsg, date, fileName, fileContentXml);
         HttpEntity<SaveErrorRequest> payload = new HttpEntity<>(req, new HttpHeaders());
         try {
             HttpEntity<Map<String, String>> response =
@@ -627,7 +668,8 @@ public class ProcessController {
             erredFoldersToMove.put(
                     folderName, inFileDir + "/errors/" + processFolderName + "/" + folderShortName);
 
-            // inform parent of error to be sent via email, but wM does not do anything sending email
+            // inform parent of error to be sent via email, but wM does not do anything sending
+            // email
             // sendErrorNotificationSvc(e.getMessage());
             throw new Exception(e.getMessage());
         }

@@ -7,4 +7,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class SaveErrorRequest {
     private String errMsg;
+    private String date;
+    private String fileName;
+    private byte[] fileContentXml;
 }
