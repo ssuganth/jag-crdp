@@ -199,19 +199,23 @@ public class ProcessController {
         }
     }
 
-    private final void processAuditSvc(String fileName) throws JsonProcessingException {
-        fileName = FilenameUtils.getName(fileName); // Extract file name from full path
+    private final void processAuditSvc(String fileName) throws IOException {
+        String shortFileName = FilenameUtils.getName(fileName); // Extract file name from full path
 
         UriComponentsBuilder builder =
                 UriComponentsBuilder.fromHttpUrl(host + "process-audit")
                         .queryParam("fileName", fileName);
+
+        ProcessAuditRequest req =
+                new ProcessAuditRequest(shortFileName, readFile(new File(fileName)));
+        HttpEntity<ProcessAuditRequest> payload = new HttpEntity<>(req, new HttpHeaders());
         // Send ORDS request
         try {
             HttpEntity<ProcessAuditResponse> resp =
                     restTemplate.exchange(
                             builder.toUriString(),
-                            HttpMethod.GET,
-                            new HttpEntity<>(new HttpHeaders()),
+                            HttpMethod.POST,
+                            payload,
                             ProcessAuditResponse.class);
             log.info(
                     objectMapper.writeValueAsString(
@@ -229,19 +233,21 @@ public class ProcessController {
         }
     }
 
-    private final void processStatusSvc(String fileName) throws JsonProcessingException {
-        fileName = FilenameUtils.getName(fileName); // Extract file name from full path
+    private final void processStatusSvc(String fileName) throws IOException {
+        String shortFileName = FilenameUtils.getName(fileName); // Extract file name from full path
 
-        UriComponentsBuilder builder =
-                UriComponentsBuilder.fromHttpUrl(host + "process-status")
-                        .queryParam("fileName", fileName);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-status");
+
+        ProcessStatusRequest req =
+                new ProcessStatusRequest(shortFileName, readFile(new File(fileName)));
+        HttpEntity<ProcessStatusRequest> payload = new HttpEntity<>(req, new HttpHeaders());
         // Send ORDS request
         try {
             HttpEntity<ProcessStatusResponse> resp =
                     restTemplate.exchange(
                             builder.toUriString(),
-                            HttpMethod.GET,
-                            new HttpEntity<>(new HttpHeaders()),
+                            HttpMethod.POST,
+                            payload,
                             ProcessStatusResponse.class);
             log.info(
                     objectMapper.writeValueAsString(
@@ -357,7 +363,8 @@ public class ProcessController {
 
             ProcessXMLRequest req = new ProcessXMLRequest(ccDocument, guidMapDocument);
             if (folderShortName.equals("CCs")) {
-                UriComponentsBuilder builder3 = UriComponentsBuilder.fromHttpUrl(host + "doc/processCCs");
+                UriComponentsBuilder builder3 =
+                        UriComponentsBuilder.fromHttpUrl(host + "doc/processCCs");
                 HttpEntity<ProcessXMLRequest> payload = new HttpEntity<>(req, new HttpHeaders());
                 try {
                     HttpEntity<Map<String, String>> response =
@@ -382,7 +389,8 @@ public class ProcessController {
                     throw new ORDSException();
                 }
             } else if (folderShortName.equals("Letters")) {
-                UriComponentsBuilder builder3 = UriComponentsBuilder.fromHttpUrl(host + "doc/processLetters");
+                UriComponentsBuilder builder3 =
+                        UriComponentsBuilder.fromHttpUrl(host + "doc/processLetters");
                 HttpEntity<ProcessXMLRequest> payload = new HttpEntity<>(req, new HttpHeaders());
                 try {
                     HttpEntity<Map<String, String>> response =
