@@ -1,13 +1,15 @@
 package ca.bc.gov.open.crdp.models;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.*;
+
+import java.io.Serializable;
 
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
-public class GenerateIncomingReqFileResponse {
+public class GenerateIncomingReqFileResponse implements Serializable {
     private String status;
     private String errMsg;
     private String fileName;
-    private byte[] file;
+    private String file;
 }

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -84,7 +85,7 @@ public class TransmitController {
             // Create file to outgoing file directory
             File outgoingFile = new File(outFileDir + resp.getBody().getFileName());
             try (FileOutputStream outputStream = new FileOutputStream(outgoingFile)) {
-                outputStream.write(resp.getBody().getFile());
+                outputStream.write(resp.getBody().getFile().getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
                 log.error("Fail to create " + outFileDir + resp.getBody().getFileName());
                 throw e;
