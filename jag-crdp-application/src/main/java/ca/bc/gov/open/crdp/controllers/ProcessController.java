@@ -45,7 +45,11 @@ public class ProcessController {
     private String inFileDir = "/";
 
     @Value("${crdp.notification-addresses}")
-    private static String errNotificationAddresses = "";
+    public void setNameStatic(String addresses) {
+        ProcessController.errNotificationAddresses = addresses;
+    }
+
+    private static String errNotificationAddresses;
 
     private static JavaMailSender emailSender;
     private final RestTemplate restTemplate;
