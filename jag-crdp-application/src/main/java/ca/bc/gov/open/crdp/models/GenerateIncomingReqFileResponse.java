@@ -1,8 +1,7 @@
 package ca.bc.gov.open.crdp.models;
 
-import lombok.*;
-
 import java.io.Serializable;
+import lombok.*;
 
 @Data
 @NoArgsConstructor

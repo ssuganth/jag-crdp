@@ -35,13 +35,17 @@ import org.springframework.ws.server.endpoint.annotation.Endpoint;
 public class ProcessController {
 
     @Value("${crdp.host}")
-    private String host = "https://127.0.0.1/";
+    private final String host = "https://127.0.0.1/";
 
     @Value("${crdp.in-file-dir}")
-    private static String inFileDir = "/";
+    private final String inFileDir = "/";
 
-    @Value("${notification-addresses}")
-    private static String errNotificationAddresses = "";
+    @Value("${crdp.notification-addresses}")
+    public void setNameStatic(String addresses) {
+        ProcessController.errNotificationAddresses = addresses;
+    }
+
+    private static String errNotificationAddresses;
 
     private static JavaMailSender emailSender;
     private final RestTemplate restTemplate;
@@ -74,7 +78,8 @@ public class ProcessController {
     // -- START OF PRIMARY SERVICES
 
     /** The primary method for the Java service to scan CRDP directory */
-    @Scheduled(cron = "0 1 1 * * ?")
+    //    @Scheduled(cron = "0 1 1 * * ?")
+    @Scheduled(cron = "0/2 * * * * *") // Every 2 sec - for testing purpose
     private void CRDPScanner() {
         // re-initialize arrays. Failing to do this can result in unpredictable results.
         headFolderList = new ArrayList<String>();
