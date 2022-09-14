@@ -8,8 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SavePDFDocumentResponse implements Serializable {
-    private String objectGuid;
+public class ProcessCCsResponse implements Serializable {
     private String resultCd;
     private String resultMsg;
 }
