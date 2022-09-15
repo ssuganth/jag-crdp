@@ -56,7 +56,6 @@ public class TransmitController {
         this.objectMapper = objectMapper;
     }
 
-    // Source from :    http://reeks.bcgov/
     // CRON Job Name:   CRDP Transmit Outgoing File
     //                  2020/04/14 14:44:14 600s
     // Pattern      :   "0/10 * * * * *"

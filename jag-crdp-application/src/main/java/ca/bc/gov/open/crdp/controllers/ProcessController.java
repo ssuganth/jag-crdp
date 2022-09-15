@@ -79,7 +79,6 @@ public class ProcessController {
         this.objectMapper = objectMapper;
     }
 
-    // Source from :    http://reeks.bcgov/
     // CRON Job Name:   CRDP Incoming File Processor
     //                  2020/04/22 16:30:00 86400s
     // Pattern      :   "* 0/24 * * * *"
