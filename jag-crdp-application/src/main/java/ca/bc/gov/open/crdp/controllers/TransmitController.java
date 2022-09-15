@@ -56,10 +56,13 @@ public class TransmitController {
         this.objectMapper = objectMapper;
     }
 
+    // CRON Job Name:   CRDP Transmit Outgoing File
+    //                  2020/04/14 14:44:14 600s
+    // Pattern      :   "0/10 * * * * *"
+    // Interval     :   Every 10 minutes
     @PayloadRoot(localPart = "generateIncomingRequestFile")
     @ResponsePayload
-    //    @Scheduled(cron = "0 0 8 ? * Tue") // Every Tuesday at 8 AM
-    @Scheduled(cron = "0/2 * * * * *") // Every 2 sec - for testing purpose
+    @Scheduled(cron = "${crdp.cron-job-incomming-file}")
     private void GenerateIncomingRequestFile() throws JsonProcessingException {
         UriComponentsBuilder builder =
                 UriComponentsBuilder.fromHttpUrl(host + "incoming-file")

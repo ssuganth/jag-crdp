@@ -1,6 +1,5 @@
 package ca.bc.gov.open.crdp.models;
 
-import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProcessXMLRequest implements Serializable {
-    private byte[] ccDocument;
-    private byte[] map;
+public class GuidDocumentMapping {
+    private String file_name;
+    private String object_guid;
 }

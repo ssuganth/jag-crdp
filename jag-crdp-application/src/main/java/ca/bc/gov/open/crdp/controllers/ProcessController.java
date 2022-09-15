@@ -7,12 +7,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.xml.bind.JAXB;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -35,10 +39,10 @@ import org.springframework.ws.server.endpoint.annotation.Endpoint;
 public class ProcessController {
 
     @Value("${crdp.host}")
-    private final String host = "https://127.0.0.1/";
+    private String host = "https://127.0.0.1/";
 
     @Value("${crdp.in-file-dir}")
-    private final String inFileDir = "/";
+    private String inFileDir = "/";
 
     @Value("${crdp.notification-addresses}")
     public void setNameStatic(String addresses) {
@@ -75,11 +79,12 @@ public class ProcessController {
         this.objectMapper = objectMapper;
     }
 
-    // -- START OF PRIMARY SERVICES
-
+    // CRON Job Name:   CRDP Incoming File Processor
+    //                  2020/04/22 16:30:00 86400s
+    // Pattern      :   "* 0/24 * * * *"
+    // Interval     :   Every 24hours
     /** The primary method for the Java service to scan CRDP directory */
-    //    @Scheduled(cron = "0 1 1 * * ?")
-    @Scheduled(cron = "0/2 * * * * *") // Every 2 sec - for testing purpose
+    @Scheduled(cron = "${crdp.cron-job-outgoing-file}")
     private void CRDPScanner() {
         // re-initialize arrays. Failing to do this can result in unpredictable results.
         headFolderList = new ArrayList<String>();
@@ -270,6 +275,7 @@ public class ProcessController {
         }
     }
 
+    @SneakyThrows
     private final void processDocumentsSvc(
             String folderName, String folderShortName, String processedDate) throws IOException {
         String[] fileList;
@@ -320,7 +326,7 @@ public class ProcessController {
             throw new ORDSException();
         }
 
-        GuidMapDocument guidMapDocument = new GuidMapDocument("1", new HashMap<>());
+        GuidMapDocument guidMapDocument = new GuidMapDocument("1", new ArrayList<>());
         if (resp.getBody().get("status").equals("N")) {
             List<String> pdfs = extractPDFFileNames(folderName);
             UriComponentsBuilder builder2 = UriComponentsBuilder.fromHttpUrl(host + "doc/save");
@@ -343,10 +349,11 @@ public class ProcessController {
                     if (response.getBody().getResultCd().equals("0")) {
                         // map file name and guid
                         guidMapDocument
-                                .getMapping()
-                                .put(
-                                        FilenameUtils.getName(pdf),
-                                        response.getBody().getObjectGuid());
+                                .getMappings()
+                                .add(
+                                        new GuidDocumentMapping(
+                                                FilenameUtils.getName(pdf),
+                                                response.getBody().getObjectGuid()));
                     } else {
                         saveError(
                                 response.getBody().getResultMsg(),
@@ -366,18 +373,23 @@ public class ProcessController {
                 }
             }
 
-            ProcessXMLRequest req = new ProcessXMLRequest(ccDocument, guidMapDocument);
+            StringWriter sw = new StringWriter();
+            JAXB.marshal(guidMapDocument, sw);
+            String xml = sw.toString();
+
+            ProcessXMLRequest req =
+                    new ProcessXMLRequest(ccDocument, xml.getBytes(StandardCharsets.UTF_8));
             if (folderShortName.equals("CCs")) {
                 UriComponentsBuilder builder3 =
                         UriComponentsBuilder.fromHttpUrl(host + "doc/processCCs");
                 HttpEntity<ProcessXMLRequest> payload = new HttpEntity<>(req, new HttpHeaders());
                 try {
-                    HttpEntity<Map<String, String>> response =
+                    HttpEntity<ProcessCCsResponse> response =
                             restTemplate.exchange(
                                     builder3.toUriString(),
                                     HttpMethod.POST,
                                     payload,
-                                    new ParameterizedTypeReference<>() {});
+                                    ProcessCCsResponse.class);
                     log.info(
                             objectMapper.writeValueAsString(
                                     new RequestSuccessLog(

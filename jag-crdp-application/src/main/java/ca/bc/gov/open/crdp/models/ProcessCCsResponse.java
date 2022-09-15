@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProcessXMLRequest implements Serializable {
-    private byte[] ccDocument;
-    private byte[] map;
+public class ProcessCCsResponse implements Serializable {
+    private String resultCd;
+    private String resultMsg;
 }
