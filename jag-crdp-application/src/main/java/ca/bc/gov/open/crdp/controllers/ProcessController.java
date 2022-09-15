@@ -350,7 +350,7 @@ public class ProcessController {
                     if (response.getBody().getResultCd().equals("0")) {
                         // map file name and guid
                         guidMapDocument
-                                .getMapping()
+                                .getMappings()
                                 .add(
                                         new GuidDocumentMapping(
                                                 FilenameUtils.getName(pdf),

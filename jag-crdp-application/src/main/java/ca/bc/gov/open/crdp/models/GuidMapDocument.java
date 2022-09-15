@@ -18,5 +18,5 @@ public class GuidMapDocument {
     private String version;
 
     @XmlElement(name = "Mapping")
-    private List<GuidDocumentMapping> Mapping;
+    private List<GuidDocumentMapping> mappings;
 }
