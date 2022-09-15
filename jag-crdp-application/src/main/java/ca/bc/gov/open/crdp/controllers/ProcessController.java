@@ -39,7 +39,7 @@ import org.springframework.ws.server.endpoint.annotation.Endpoint;
 public class ProcessController {
 
     @Value("${crdp.host}")
-    private final String host = "https://127.0.0.1/";
+    private String host = "https://127.0.0.1/";
 
     @Value("${crdp.in-file-dir}")
     private String inFileDir = "/";
