@@ -212,9 +212,7 @@ public class ProcessController {
     private final void processAuditSvc(String fileName) throws IOException {
         String shortFileName = FilenameUtils.getName(fileName); // Extract file name from full path
 
-        UriComponentsBuilder builder =
-                UriComponentsBuilder.fromHttpUrl(host + "process-audit")
-                        .queryParam("fileName", fileName);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-audit");
 
         ProcessAuditRequest req =
                 new ProcessAuditRequest(shortFileName, readFile(new File(fileName)));

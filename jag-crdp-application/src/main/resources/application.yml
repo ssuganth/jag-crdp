@@ -8,6 +8,8 @@ crdp:
   out-file-dir: ${OUTGOING_FILE_DIR}
   notification-addresses: ${NOTIFICATION_ADDR}
   smtp-from: ${SMTP_FROM}
+  smtp-username: ${SMTP_USERNAME}
+  smtp-password: ${SMTP_PASSWORD}
   cron-job-incomming-file:  ${CRON_JOB_INCOMMING_FILE}
   cron-job-outgoing-file:  ${CRON_JOB_OUTGOING_FILE}
 
