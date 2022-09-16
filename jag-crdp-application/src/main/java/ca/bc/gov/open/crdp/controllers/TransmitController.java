@@ -38,10 +38,18 @@ public class TransmitController {
     @Value("${crdp.out-file-dir}")
     private String outFileDir = "/";
 
-    @Value("${notification-addresses}")
-    private static String errNotificationAddresses = "";
+    @Value("${crdp.notification-addresses}")
+    public void setErrNotificationAddresses(String addresses) {
+        TransmitController.errNotificationAddresses = addresses;
+    }
 
-    @Value("${smtp-from}")
+    private static String errNotificationAddresses;
+
+    @Value("${crdp.smtp-from}")
+    public void setDefaultSmtpFrom(String from) {
+        TransmitController.defaultSmtpFrom = from;
+    }
+
     private static String defaultSmtpFrom = "";
 
     private final RestTemplate restTemplate;
@@ -64,9 +72,7 @@ public class TransmitController {
     @ResponsePayload
     @Scheduled(cron = "${crdp.cron-job-incomming-file}")
     private void GenerateIncomingRequestFile() throws JsonProcessingException {
-        UriComponentsBuilder builder =
-                UriComponentsBuilder.fromHttpUrl(host + "incoming-file")
-                        .queryParam("fileDirectory", outFileDir);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "incoming-file");
 
         try {
             HttpEntity<GenerateIncomingReqFileResponse> resp =
@@ -86,7 +92,7 @@ public class TransmitController {
             }
 
             // Create file to outgoing file directory
-            File outgoingFile = new File(outFileDir + resp.getBody().getFileName());
+            File outgoingFile = new File(outFileDir + "/" + resp.getBody().getFileName());
             try (FileOutputStream outputStream = new FileOutputStream(outgoingFile)) {
                 outputStream.write(resp.getBody().getFile().getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
