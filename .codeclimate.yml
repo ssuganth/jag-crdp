@@ -1,0 +1,13 @@
+version: "2"
+checks:
+  method-lines:
+    config:
+      threshold: 50
+exclude_patterns:
+  - "AutomatedTest/"
+  - "**/*.js"
+  - ".mvn/"
+  - ".github/"
+  - ".env"
+  - ".env.template"
+  - "gitops/"
