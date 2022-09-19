@@ -71,7 +71,7 @@ public class TransmitController {
     @PayloadRoot(localPart = "generateIncomingRequestFile")
     @ResponsePayload
     @Scheduled(cron = "${crdp.cron-job-incomming-file}")
-    private void GenerateIncomingRequestFile() throws JsonProcessingException {
+    public void GenerateIncomingRequestFile() throws JsonProcessingException {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "incoming-file");
 
         try {

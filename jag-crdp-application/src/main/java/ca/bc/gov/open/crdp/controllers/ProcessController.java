@@ -445,8 +445,7 @@ public class ProcessController {
         }
     }
 
-    private final void processReportsSvc(String folderName, String processedDate)
-            throws IOException {
+    public void processReportsSvc(String folderName, String processedDate) throws IOException {
         List<String> pdfs = extractPDFFileNames(folderName);
         for (String pdf : pdfs) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "rpt");
@@ -476,7 +475,7 @@ public class ProcessController {
         }
     }
 
-    private final void saveError(String errMsg, String date, String fileName, byte[] fileContentXml)
+    public void saveError(String errMsg, String date, String fileName, byte[] fileContentXml)
             throws JsonProcessingException {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "err/save");
         SaveErrorRequest req = new SaveErrorRequest(errMsg, date, fileName, fileContentXml);
