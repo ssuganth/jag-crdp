@@ -193,7 +193,7 @@ public class ProcessController {
         }
     }
 
-    public static final void sendErrorNotificationSvc(String errorMsg) {
+    private static final void sendErrorNotificationSvc(String errorMsg) {
         String subject = "An error was received from the CRDP System";
         try {
             // delimiter - " ,"
