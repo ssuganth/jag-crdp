@@ -43,7 +43,7 @@ public class TransmitController {
         TransmitController.errNotificationAddresses = addresses;
     }
 
-    private static String errNotificationAddresses;
+    private static String errNotificationAddresses = "";
 
     @Value("${crdp.smtp-from}")
     public void setDefaultSmtpFrom(String from) {
@@ -112,7 +112,7 @@ public class TransmitController {
         }
     }
 
-    private void processError(String errMsg) {
+    public void processError(String errMsg) {
         String integrationNameMsg = "CRDP";
         String errorTypeMsg = "NA";
         String errorSubtypeMsg = "NA";
@@ -146,15 +146,14 @@ public class TransmitController {
         message.setTo(addresses);
         emailSender.send(message);
     }
-
     // Never being used
-    private void DeleteFile(String fileName) throws JsonProcessingException {
-        File fileToDelete = new File(outFileDir + fileName);
-        try {
-            fileToDelete.delete();
-        } catch (Exception ex) {
-            log.error("Fail to delete " + outFileDir + fileName);
-            throw ex;
-        }
-    }
+    //    private void DeleteFile(String fileName) throws JsonProcessingException {
+    //        File fileToDelete = new File(outFileDir + fileName);
+    //        try {
+    //            fileToDelete.delete();
+    //        } catch (Exception ex) {
+    //            log.error("Fail to delete " + outFileDir + fileName);
+    //            throw ex;
+    //        }
+    //    }
 }

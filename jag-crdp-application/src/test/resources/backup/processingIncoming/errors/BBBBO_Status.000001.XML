@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CRDPFORMS>
+  <CRDPSTATUS01>
+    <Record_Type>01</Record_Type>
+    <File_Name>BBBBO_STATUS.000001.XML</File_Name>
+    <File_Date>2017-01-15</File_Date>
+  </CRDPSTATUS01>
+  <CRDPSTATUSDETAIL>
+    <Court_Number>5939</Court_Number>
+    <Divorce_Registry_Number>1233</Divorce_Registry_Number>
+    <State>4</State>
+    <Events>
+      <Event>
+         <Event_Time_Stamp>2016-05-09T11:20:15-05:00</Event_Time_Stamp>
+         <Event_Reason_Code>50003</Event_Reason_Code>
+         <Event_Reason_Text>Data Entry Part I</Event_Reason_Text>
+      </Event>
+      <Event>
+         <Event_Time_Stamp>2016-05-28T00:33:45-05:00</Event_Time_Stamp>
+         <Event_Reason_Code>60004</Event_Reason_Code>
+      </Event>
+      <Event>
+         <Event_Time_Stamp>2016-05-28T00:33:45-05:00</Event_Time_Stamp>
+         <Event_Reason_Code>50043</Event_Reason_Code>
+      </Event>
+    </Events>
+  </CRDPSTATUSDETAIL>
+  <CRDPSTATUSDETAIL>
+    <Court_Number>5939</Court_Number>
+    <Divorce_Registry_Number>51549</Divorce_Registry_Number>
+    <State>3</State>
+    <Events>
+      <Event>
+         <Event_Time_Stamp>2016-09-02T15:35:41-05:00</Event_Time_Stamp>
+         <Event_Reason_Code>50003</Event_Reason_Code>
+         <Event_Reason_Text>Data Entry Part I</Event_Reason_Text>
+      </Event>
+      <Event>
+         <Event_Time_Stamp>2016-09-15T15:29:58-05:00</Event_Time_Stamp>
+         <Event_Reason_Code>60003</Event_Reason_Code>
+      </Event>
+      <Event>
+         <Event_Time_Stamp>2016-09-15T15:29:58-05:00</Event_Time_Stamp>
+         <Event_Reason_Code>50042</Event_Reason_Code>
+      </Event>
+    </Events>
+  </CRDPSTATUSDETAIL>
+  <CRDPSTATUS99>
+    <Record_Type>99</Record_Type>
+    <Record_Count>2</Record_Count>
+  </CRDPSTATUS99>
+</CRDPFORMS>

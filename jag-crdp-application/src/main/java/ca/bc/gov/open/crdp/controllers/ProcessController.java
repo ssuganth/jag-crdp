@@ -49,7 +49,7 @@ public class ProcessController {
         ProcessController.errNotificationAddresses = addresses;
     }
 
-    private static String errNotificationAddresses;
+    private static String errNotificationAddresses = "";
 
     private static JavaMailSender emailSender;
     private final RestTemplate restTemplate;
@@ -85,7 +85,7 @@ public class ProcessController {
     // Interval     :   Every 24hours
     /** The primary method for the Java service to scan CRDP directory */
     @Scheduled(cron = "${crdp.cron-job-outgoing-file}")
-    private void CRDPScanner() {
+    public void CRDPScanner() {
         // re-initialize arrays. Failing to do this can result in unpredictable results.
         headFolderList = new ArrayList<String>();
         processedFilesToMove = new TreeMap<String, String>(); // completed files.
