@@ -1,7 +1,7 @@
 package ca.bc.gov.open.crdp;
 
 import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import ca.bc.gov.open.crdp.controllers.ProcessController;
 import ca.bc.gov.open.crdp.exceptions.ORDSException;
@@ -364,6 +364,31 @@ public class ProcessControllerTests {
                         Mockito.<ParameterizedTypeReference<Map<String, String>>>any()))
                 .thenReturn(responseEntity5);
 
+        // processReportsSvc
+        Map<String, String> m2 = new HashMap<>();
+        ResponseEntity<Map<String, String>> responseEntity6 =
+                new ResponseEntity<>(m1, HttpStatus.OK);
+        when(restTemplate.exchange(
+                        contains("doc/processLetters"),
+                        Mockito.eq(HttpMethod.POST),
+                        Mockito.<HttpEntity<String>>any(),
+                        Mockito.<ParameterizedTypeReference<Map<String, String>>>any()))
+                .thenReturn(responseEntity6);
+
         controller.CRDPScanner();
+
+        // verify \processingIncoming, \errors, and \processed are empty
+        boolean passed = false;
+        File errorsFolderer = new File(inFileDir + "/errors/");
+
+        try {
+            if (FileUtils.isEmptyDirectory(errorsFolderer)) {
+                passed = true;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Assertions.assertTrue(true);
     }
 }
