@@ -23,7 +23,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class TransmitControllerTest {
+public class TransmitControllerTests {
     private String outputDir;
     @Mock private ObjectMapper objectMapper;
     @Mock private JavaMailSender emailSender;
