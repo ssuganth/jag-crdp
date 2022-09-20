@@ -20,6 +20,8 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
+import org.springframework.mail.MailSendException;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
@@ -294,6 +296,23 @@ public class ProcessControllerTests {
 
     @Test
     @Order(10)
+    public void sendErrorNotificationSvcTest() throws IOException {
+        String errMsg = "AA";
+        doNothing().when(emailSender).send(any(SimpleMailMessage.class));
+        controller.sendErrorNotificationSvc(errMsg);
+    }
+
+    @Test
+    @Order(11)
+    public void sendErrorNotificationSvcTestFail() throws IOException {
+        String errMsg = "AA";
+        doThrow(new MailSendException(errMsg)).when(emailSender).send(any(SimpleMailMessage.class));
+        Assertions.assertThrows(
+                MailSendException.class, () -> controller.sendErrorNotificationSvc(errMsg));
+    }
+
+    @Test
+    @Order(12)
     public void CRDPScannerTest() throws IOException {
 
         ReflectionTestUtils.setField(controller, "inFileDir", inFileDir, String.class);

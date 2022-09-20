@@ -36,9 +36,6 @@
                         <exclude>**/AdobeApplication.class</exclude>
                         <exclude>**/ObjectFactory.class</exclude>
                         <exclude>**/Adapter1.class</exclude>
-                        <exclude>**/configuration/MyBasicAuthenticationEntryPoint.class*</exclude>
-                        <exclude>**/configuration/SecurityConfig.class*</exclude>
-                        <exclude>**/configuration/MailConfig.class*</exclude>
                     </excludes>
                 </configuration>
                 <executions>
