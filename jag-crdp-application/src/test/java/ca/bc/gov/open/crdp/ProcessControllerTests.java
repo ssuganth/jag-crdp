@@ -40,14 +40,14 @@ public class ProcessControllerTests {
      *  backup folder structure:
      *  resources\backup\processingIncoming\Processed_2020-03-24\ABCDO_Audit.000001.XML
      *                                                           \ABCDO_Status.000001.XML
-     *                                                           \CCs\ABCDO_CCs.XML
-     *                                                               \ABCDO_CCs.pdf
-     *                                                           \Letters\ABCDO_Letters.XML
-     *                                                                    \ABCDO_Letters_1.pdf
-     *                                                                    \ABCDO_Letters_2.pdf
+     *                                                           \CCs\ABCDO_CC.XML
+     *                                                               \ABCDO_CC.pdf
+     *                                                           \Letters\ABCDO_Letter.XML
+     *                                                                    \ABCDO_Letter_1.pdf
+     *                                                                    \ABCDO_Letter_2.pdf
      *                                                           \JUS178s
-     *                                                           \R-Lists\ABCDO_Reports.XML
-     *                                                                   \ABCDO_Reports_1.pdf
+     *                                                           \R-Lists\ABCDO_Report.XML
+     *                                                                   \ABCDO_Report_1.pdf
      *                                       \processed
      *                                       \errors
      *
