@@ -49,7 +49,7 @@ public class ProcessController {
         ProcessController.errNotificationAddresses = addresses;
     }
 
-    private static String errNotificationAddresses;
+    private static String errNotificationAddresses = "";
 
     private static JavaMailSender emailSender;
     private final RestTemplate restTemplate;
@@ -85,7 +85,7 @@ public class ProcessController {
     // Interval     :   Every 24hours
     /** The primary method for the Java service to scan CRDP directory */
     @Scheduled(cron = "${crdp.cron-job-outgoing-file}")
-    private void CRDPScanner() {
+    public void CRDPScanner() {
         // re-initialize arrays. Failing to do this can result in unpredictable results.
         headFolderList = new ArrayList<String>();
         processedFilesToMove = new TreeMap<String, String>(); // completed files.
@@ -209,16 +209,18 @@ public class ProcessController {
         }
     }
 
-    private final void processAuditSvc(String fileName) throws IOException {
-        String shortFileName = FilenameUtils.getName(fileName); // Extract file name from full path
+    public void processAuditSvc(String fileName) throws IOException {
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-audit");
-
-        ProcessAuditRequest req =
-                new ProcessAuditRequest(shortFileName, readFile(new File(fileName)));
-        HttpEntity<ProcessAuditRequest> payload = new HttpEntity<>(req, new HttpHeaders());
         // Send ORDS request
         try {
+            String shortFileName =
+                    FilenameUtils.getName(fileName); // Extract file name from full path
+            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-audit");
+
+            ProcessAuditRequest req =
+                    new ProcessAuditRequest(shortFileName, readFile(new File(fileName)));
+            HttpEntity<ProcessAuditRequest> payload = new HttpEntity<>(req, new HttpHeaders());
+
             HttpEntity<ProcessAuditResponse> resp =
                     restTemplate.exchange(
                             builder.toUriString(),
@@ -241,7 +243,7 @@ public class ProcessController {
         }
     }
 
-    private final void processStatusSvc(String fileName) throws IOException {
+    public void processStatusSvc(String fileName) throws IOException {
         String shortFileName = FilenameUtils.getName(fileName); // Extract file name from full path
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-status");
@@ -274,8 +276,8 @@ public class ProcessController {
     }
 
     @SneakyThrows
-    private final void processDocumentsSvc(
-            String folderName, String folderShortName, String processedDate) throws IOException {
+    public void processDocumentsSvc(String folderName, String folderShortName, String processedDate)
+            throws IOException {
         String[] fileList;
 
         // Creates a new File instance by converting the given pathname string
@@ -443,8 +445,7 @@ public class ProcessController {
         }
     }
 
-    private final void processReportsSvc(String folderName, String processedDate)
-            throws IOException {
+    public void processReportsSvc(String folderName, String processedDate) throws IOException {
         List<String> pdfs = extractPDFFileNames(folderName);
         for (String pdf : pdfs) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "rpt");
@@ -474,7 +475,7 @@ public class ProcessController {
         }
     }
 
-    private final void saveError(String errMsg, String date, String fileName, byte[] fileContentXml)
+    public void saveError(String errMsg, String date, String fileName, byte[] fileContentXml)
             throws JsonProcessingException {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "err/save");
         SaveErrorRequest req = new SaveErrorRequest(errMsg, date, fileName, fileContentXml);
