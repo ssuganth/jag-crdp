@@ -360,6 +360,7 @@ public class ProcessController {
                                 dateFormat.format(Calendar.getInstance().getTime()),
                                 fileName,
                                 ccDocument);
+                        throw new ORDSException();
                     }
                 } catch (ORDSException e) {
                     log.error(
@@ -395,6 +396,15 @@ public class ProcessController {
                                     new RequestSuccessLog(
                                             "Request Success",
                                             "processDocumentsSvc - ProcessCCsXML")));
+
+                    if (!response.getBody().getResultCd().equals("0")) {
+                        saveError(
+                                response.getBody().getResultMsg(),
+                                dateFormat.format(Calendar.getInstance().getTime()),
+                                fileName,
+                                ccDocument);
+                        throw new ORDSException();
+                    }
                 } catch (ORDSException e) {
                     log.error(
                             objectMapper.writeValueAsString(
@@ -410,17 +420,26 @@ public class ProcessController {
                         UriComponentsBuilder.fromHttpUrl(host + "doc/processLetters");
                 HttpEntity<ProcessXMLRequest> payload = new HttpEntity<>(req, new HttpHeaders());
                 try {
-                    HttpEntity<Map<String, String>> response =
+                    HttpEntity<ProcessLettersResponse> response =
                             restTemplate.exchange(
                                     builder3.toUriString(),
                                     HttpMethod.POST,
                                     payload,
-                                    new ParameterizedTypeReference<>() {});
+                                    ProcessLettersResponse.class);
                     log.info(
                             objectMapper.writeValueAsString(
                                     new RequestSuccessLog(
                                             "Request Success",
                                             "processDocumentsSvc - ProcessLettersXML")));
+
+                    if (!response.getBody().getResultCd().equals("0")) {
+                        saveError(
+                                response.getBody().getResultMsg(),
+                                dateFormat.format(Calendar.getInstance().getTime()),
+                                fileName,
+                                ccDocument);
+                        throw new ORDSException();
+                    }
                 } catch (ORDSException e) {
                     log.error(
                             objectMapper.writeValueAsString(
@@ -437,6 +456,7 @@ public class ProcessController {
                         dateFormat.format(Calendar.getInstance().getTime()),
                         fileName,
                         ccDocument);
+                throw new ORDSException();
             }
 
         } else {
