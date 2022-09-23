@@ -454,12 +454,7 @@ public class ProcessController {
                                             "processDocumentsSvc - ProcessLettersXML")));
 
                     if (!response.getBody().getResultCd().equals("0")) {
-                        saveError(
-                                response.getBody().getResultMsg(),
-                                dateFormat.format(Calendar.getInstance().getTime()),
-                                fileName,
-                                ccDocument);
-                        throw new ORDSException();
+                        throw new ORDSException(response.getBody().getResultMsg());
                     }
                 } catch (Exception e) {
                     log.error(
@@ -490,19 +485,25 @@ public class ProcessController {
         List<String> pdfs = extractPDFFileNames(folderName);
         for (String pdf : pdfs) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "rpt");
-            ProcessReportRequest req =
-                    new ProcessReportRequest(pdf, processedDate, readFile(new File(pdf)));
+
+            byte[] file = readFile(new File(pdf));
+
+            ProcessReportRequest req = new ProcessReportRequest(pdf, processedDate, file);
             HttpEntity<ProcessReportRequest> payload = new HttpEntity<>(req, new HttpHeaders());
             try {
-                HttpEntity<Map<String, String>> response =
+                HttpEntity<ProcessReportResponse> response =
                         restTemplate.exchange(
                                 builder.toUriString(),
                                 HttpMethod.POST,
                                 payload,
-                                new ParameterizedTypeReference<>() {});
+                                ProcessReportResponse.class);
                 log.info(
                         objectMapper.writeValueAsString(
                                 new RequestSuccessLog("Request Success", "processReportSvc")));
+
+                if (!response.getBody().getResultCd().equals("0")) {
+                    throw new ORDSException(response.getBody().getResultMsg());
+                }
             } catch (Exception e) {
                 log.error(
                         objectMapper.writeValueAsString(
@@ -511,6 +512,13 @@ public class ProcessController {
                                         "processReportSvc",
                                         e.getMessage(),
                                         req)));
+
+                saveError(
+                        e.getMessage(),
+                        dateFormat.format(Calendar.getInstance().getTime()),
+                        pdf,
+                        file);
+
                 throw new ORDSException();
             }
         }
