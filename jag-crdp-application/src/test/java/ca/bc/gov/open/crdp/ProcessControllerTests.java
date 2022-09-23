@@ -85,6 +85,7 @@ public class ProcessControllerTests {
     public void processAuditSvcTest() throws IOException {
         var fileName = inFileDir + "Processed_2020-03-24/ABCDO_Audit.000001.XML";
         var processAuditResponse = new ProcessAuditResponse();
+        processAuditResponse.setResultCd("0");
 
         ResponseEntity<ProcessAuditResponse> responseEntity =
                 new ResponseEntity<>(processAuditResponse, HttpStatus.OK);
@@ -120,6 +121,7 @@ public class ProcessControllerTests {
     public void processStatusSvcTest() throws IOException {
         var fileName = inFileDir + "Processed_2020-03-24/ABCDO_Status.000001.XML";
         var processStatusResponse = new ProcessStatusResponse();
+        processStatusResponse.setResultCd("0");
 
         ResponseEntity<ProcessStatusResponse> responseEntity =
                 new ResponseEntity<>(processStatusResponse, HttpStatus.OK);
@@ -132,7 +134,7 @@ public class ProcessControllerTests {
                         Mockito.<Class<ProcessStatusResponse>>any()))
                 .thenReturn(responseEntity);
 
-        controller.processAuditSvc(fileName);
+        controller.processStatusSvc(fileName);
     }
 
     @Test
@@ -186,6 +188,7 @@ public class ProcessControllerTests {
         var processCCsResponse = new ProcessCCsResponse();
         ResponseEntity<ProcessCCsResponse> responseEntity2 =
                 new ResponseEntity<>(processCCsResponse, HttpStatus.OK);
+        processCCsResponse.setResultCd("0");
 
         //     Set up to mock ords response
         when(restTemplate.exchange(
@@ -206,15 +209,17 @@ public class ProcessControllerTests {
         var processedDate = "2020-03-24";
 
         //     Set up to mock ords response
-        Map<String, String> m = new HashMap<>();
-        ResponseEntity<Map<String, String>> responseEntity = new ResponseEntity<>(m, HttpStatus.OK);
+        var processReportResponse = new ProcessReportResponse();
+        ResponseEntity<ProcessReportResponse> responseEntity =
+                new ResponseEntity<>(processReportResponse, HttpStatus.OK);
+        processReportResponse.setResultCd("0");
 
         // Set up to mock ords response
         when(restTemplate.exchange(
-                        AdditionalMatchers.not(contains("tokenvalue")),
+                        Mockito.any(String.class),
                         Mockito.eq(HttpMethod.POST),
                         Mockito.<HttpEntity<String>>any(),
-                        Mockito.<ParameterizedTypeReference<Map<String, String>>>any()))
+                        Mockito.<Class<ProcessReportResponse>>any()))
                 .thenReturn(responseEntity);
 
         controller.processReportsSvc(folderName, processedDate);
@@ -232,10 +237,10 @@ public class ProcessControllerTests {
 
         // Set up to mock ords response
         when(restTemplate.exchange(
-                        AdditionalMatchers.not(contains("tokenvalue")),
+                        Mockito.any(String.class),
                         Mockito.eq(HttpMethod.POST),
                         Mockito.<HttpEntity<String>>any(),
-                        Mockito.<ParameterizedTypeReference<Map<String, String>>>any()))
+                        Mockito.<Class<ProcessReportRequest>>any()))
                 .thenThrow(ORDSException.class);
 
         Assertions.assertThrows(
