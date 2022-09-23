@@ -209,15 +209,15 @@ public class ProcessController {
     }
 
     public void processAuditSvc(String fileName) throws IOException {
+        String shortFileName = FilenameUtils.getName(fileName); // Extract file name from full path
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-audit");
 
+        byte[] file = readFile(new File(fileName));
+
+        ProcessAuditRequest req = new ProcessAuditRequest(shortFileName, file);
         // Send ORDS request
         try {
-            String shortFileName =
-                    FilenameUtils.getName(fileName); // Extract file name from full path
-            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-audit");
 
-            ProcessAuditRequest req =
-                    new ProcessAuditRequest(shortFileName, readFile(new File(fileName)));
             HttpEntity<ProcessAuditRequest> payload = new HttpEntity<>(req, new HttpHeaders());
 
             HttpEntity<ProcessAuditResponse> resp =
@@ -229,6 +229,9 @@ public class ProcessController {
             log.info(
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog("Request Success", "processAuditSvc")));
+            if (!resp.getBody().getResultCd().equals("0")) {
+                throw new ORDSException(resp.getBody().getResultMsg());
+            }
 
         } catch (Exception e) {
             log.error(
@@ -238,6 +241,12 @@ public class ProcessController {
                                     "processAuditSvc",
                                     e.getMessage(),
                                     fileName)));
+            saveError(
+                    e.getMessage(),
+                    dateFormat.format(Calendar.getInstance().getTime()),
+                    fileName,
+                    file);
+
             throw new ORDSException();
         }
     }
@@ -247,8 +256,9 @@ public class ProcessController {
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-status");
 
-        ProcessStatusRequest req =
-                new ProcessStatusRequest(shortFileName, readFile(new File(fileName)));
+        byte[] file = readFile(new File(fileName));
+
+        ProcessStatusRequest req = new ProcessStatusRequest(shortFileName, file);
         HttpEntity<ProcessStatusRequest> payload = new HttpEntity<>(req, new HttpHeaders());
         // Send ORDS request
         try {
@@ -262,6 +272,9 @@ public class ProcessController {
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog("Request Success", "processStatusSvc")));
 
+            if (!resp.getBody().getResultCd().equals("0")) {
+                throw new ORDSException(resp.getBody().getResultMsg());
+            }
         } catch (Exception e) {
             log.error(
                     objectMapper.writeValueAsString(
@@ -270,6 +283,13 @@ public class ProcessController {
                                     "processStatusSvc",
                                     e.getMessage(),
                                     fileName)));
+
+            saveError(
+                    e.getMessage(),
+                    dateFormat.format(Calendar.getInstance().getTime()),
+                    fileName,
+                    file);
+
             throw new ORDSException();
         }
     }
