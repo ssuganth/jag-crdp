@@ -16,7 +16,6 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.xml.bind.JAXB;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -210,15 +209,15 @@ public class ProcessController {
     }
 
     public void processAuditSvc(String fileName) throws IOException {
+        String shortFileName = FilenameUtils.getName(fileName); // Extract file name from full path
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-audit");
 
+        byte[] file = readFile(new File(fileName));
+
+        ProcessAuditRequest req = new ProcessAuditRequest(shortFileName, file);
         // Send ORDS request
         try {
-            String shortFileName =
-                    FilenameUtils.getName(fileName); // Extract file name from full path
-            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-audit");
 
-            ProcessAuditRequest req =
-                    new ProcessAuditRequest(shortFileName, readFile(new File(fileName)));
             HttpEntity<ProcessAuditRequest> payload = new HttpEntity<>(req, new HttpHeaders());
 
             HttpEntity<ProcessAuditResponse> resp =
@@ -230,8 +229,11 @@ public class ProcessController {
             log.info(
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog("Request Success", "processAuditSvc")));
+            if (!resp.getBody().getResultCd().equals("0")) {
+                throw new ORDSException(resp.getBody().getResultMsg());
+            }
 
-        } catch (ORDSException e) {
+        } catch (Exception e) {
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -239,6 +241,12 @@ public class ProcessController {
                                     "processAuditSvc",
                                     e.getMessage(),
                                     fileName)));
+            saveError(
+                    e.getMessage(),
+                    dateFormat.format(Calendar.getInstance().getTime()),
+                    fileName,
+                    file);
+
             throw new ORDSException();
         }
     }
@@ -248,8 +256,9 @@ public class ProcessController {
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-status");
 
-        ProcessStatusRequest req =
-                new ProcessStatusRequest(shortFileName, readFile(new File(fileName)));
+        byte[] file = readFile(new File(fileName));
+
+        ProcessStatusRequest req = new ProcessStatusRequest(shortFileName, file);
         HttpEntity<ProcessStatusRequest> payload = new HttpEntity<>(req, new HttpHeaders());
         // Send ORDS request
         try {
@@ -263,7 +272,10 @@ public class ProcessController {
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog("Request Success", "processStatusSvc")));
 
-        } catch (ORDSException e) {
+            if (!resp.getBody().getResultCd().equals("0")) {
+                throw new ORDSException(resp.getBody().getResultMsg());
+            }
+        } catch (Exception e) {
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -271,11 +283,17 @@ public class ProcessController {
                                     "processStatusSvc",
                                     e.getMessage(),
                                     fileName)));
+
+            saveError(
+                    e.getMessage(),
+                    dateFormat.format(Calendar.getInstance().getTime()),
+                    fileName,
+                    file);
+
             throw new ORDSException();
         }
     }
 
-    @SneakyThrows
     public void processDocumentsSvc(String folderName, String folderShortName, String processedDate)
             throws IOException {
         String[] fileList;
@@ -315,7 +333,7 @@ public class ProcessController {
                                     "Request Success",
                                     "processDocumentsSvc - GetDocumentProcessStatus")));
 
-        } catch (ORDSException e) {
+        } catch (Exception e) {
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -355,13 +373,9 @@ public class ProcessController {
                                                 FilenameUtils.getName(pdf),
                                                 response.getBody().getObjectGuid()));
                     } else {
-                        saveError(
-                                response.getBody().getResultMsg(),
-                                dateFormat.format(Calendar.getInstance().getTime()),
-                                fileName,
-                                ccDocument);
+                        throw new ORDSException(response.getBody().getResultMsg());
                     }
-                } catch (ORDSException e) {
+                } catch (Exception e) {
                     log.error(
                             objectMapper.writeValueAsString(
                                     new OrdsErrorLog(
@@ -369,6 +383,12 @@ public class ProcessController {
                                             "processDocumentsSvc - SavePDFDocument",
                                             e.getMessage(),
                                             req)));
+                    saveError(
+                            e.getMessage(),
+                            dateFormat.format(Calendar.getInstance().getTime()),
+                            fileName,
+                            ccDocument);
+
                     throw new ORDSException();
                 }
             }
@@ -395,7 +415,11 @@ public class ProcessController {
                                     new RequestSuccessLog(
                                             "Request Success",
                                             "processDocumentsSvc - ProcessCCsXML")));
-                } catch (ORDSException e) {
+
+                    if (!response.getBody().getResultCd().equals("0")) {
+                        throw new ORDSException(response.getBody().getResultMsg());
+                    }
+                } catch (Exception e) {
                     log.error(
                             objectMapper.writeValueAsString(
                                     new OrdsErrorLog(
@@ -403,6 +427,13 @@ public class ProcessController {
                                             "processDocumentsSvc - ProcessCCsXML",
                                             e.getMessage(),
                                             req)));
+
+                    saveError(
+                            e.getMessage(),
+                            dateFormat.format(Calendar.getInstance().getTime()),
+                            fileName,
+                            ccDocument);
+
                     throw new ORDSException();
                 }
             } else if (folderShortName.equals("Letters")) {
@@ -410,18 +441,22 @@ public class ProcessController {
                         UriComponentsBuilder.fromHttpUrl(host + "doc/processLetters");
                 HttpEntity<ProcessXMLRequest> payload = new HttpEntity<>(req, new HttpHeaders());
                 try {
-                    HttpEntity<Map<String, String>> response =
+                    HttpEntity<ProcessLettersResponse> response =
                             restTemplate.exchange(
                                     builder3.toUriString(),
                                     HttpMethod.POST,
                                     payload,
-                                    new ParameterizedTypeReference<>() {});
+                                    ProcessLettersResponse.class);
                     log.info(
                             objectMapper.writeValueAsString(
                                     new RequestSuccessLog(
                                             "Request Success",
                                             "processDocumentsSvc - ProcessLettersXML")));
-                } catch (ORDSException e) {
+
+                    if (!response.getBody().getResultCd().equals("0")) {
+                        throw new ORDSException(response.getBody().getResultMsg());
+                    }
+                } catch (Exception e) {
                     log.error(
                             objectMapper.writeValueAsString(
                                     new OrdsErrorLog(
@@ -437,6 +472,7 @@ public class ProcessController {
                         dateFormat.format(Calendar.getInstance().getTime()),
                         fileName,
                         ccDocument);
+                throw new ORDSException();
             }
 
         } else {
@@ -449,20 +485,26 @@ public class ProcessController {
         List<String> pdfs = extractPDFFileNames(folderName);
         for (String pdf : pdfs) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "rpt");
-            ProcessReportRequest req =
-                    new ProcessReportRequest(pdf, processedDate, readFile(new File(pdf)));
+
+            byte[] file = readFile(new File(pdf));
+
+            ProcessReportRequest req = new ProcessReportRequest(pdf, processedDate, file);
             HttpEntity<ProcessReportRequest> payload = new HttpEntity<>(req, new HttpHeaders());
             try {
-                HttpEntity<Map<String, String>> response =
+                HttpEntity<ProcessReportResponse> response =
                         restTemplate.exchange(
                                 builder.toUriString(),
                                 HttpMethod.POST,
                                 payload,
-                                new ParameterizedTypeReference<>() {});
+                                ProcessReportResponse.class);
                 log.info(
                         objectMapper.writeValueAsString(
                                 new RequestSuccessLog("Request Success", "processReportSvc")));
-            } catch (ORDSException e) {
+
+                if (!response.getBody().getResultCd().equals("0")) {
+                    throw new ORDSException(response.getBody().getResultMsg());
+                }
+            } catch (Exception e) {
                 log.error(
                         objectMapper.writeValueAsString(
                                 new OrdsErrorLog(
@@ -470,6 +512,13 @@ public class ProcessController {
                                         "processReportSvc",
                                         e.getMessage(),
                                         req)));
+
+                saveError(
+                        e.getMessage(),
+                        dateFormat.format(Calendar.getInstance().getTime()),
+                        pdf,
+                        file);
+
                 throw new ORDSException();
             }
         }
@@ -490,7 +539,7 @@ public class ProcessController {
             log.info(
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog("Request Success", "SaveError")));
-        } catch (ORDSException e) {
+        } catch (Exception e) {
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(

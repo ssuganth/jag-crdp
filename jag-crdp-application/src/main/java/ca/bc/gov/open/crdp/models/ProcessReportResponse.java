@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProcessStatusResponse implements Serializable {
+public class ProcessReportResponse implements Serializable {
     private String resultCd;
     private String resultMsg;
 }

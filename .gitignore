@@ -38,3 +38,5 @@ build/
 cc-test-reporter
 /TestErrors.zip
 
+/src/test/resources/test/
+

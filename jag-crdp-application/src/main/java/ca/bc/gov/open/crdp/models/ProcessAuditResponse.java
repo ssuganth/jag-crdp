@@ -9,5 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProcessAuditResponse implements Serializable {
-    private String status;
+    private String resultCd;
+    private String resultMsg;
 }
