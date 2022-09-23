@@ -11,4 +11,8 @@ public class ORDSException extends RuntimeException {
     public ORDSException() {
         super();
     }
+
+    public ORDSException(String message) {
+        super(message);
+    }
 }
