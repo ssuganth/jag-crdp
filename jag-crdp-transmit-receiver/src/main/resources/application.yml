@@ -1,0 +1,27 @@
+security:
+  basic-auth:
+    password: ${BASIC_AUTH_PASS}
+    username: ${BASIC_AUTH_USER}
+crdp:
+  host: ${ORDS_HOST}
+  in-file-dir: ${INCOMING_FILE_DIR}
+  out-file-dir: ${OUTGOING_FILE_DIR}
+  notification-addresses: ${NOTIFICATION_ADDR}
+  smtp-from: ${SMTP_FROM}
+  smtp-username: ${SMTP_USERNAME}
+  smtp-password: ${SMTP_PASSWORD}
+  cron-job-incomming-file:  ${CRON_JOB_INCOMMING_FILE}
+  cron-job-outgoing-file:  ${CRON_JOB_OUTGOING_FILE}
+  rabbitmq:
+    ords-host: ${ORDS_HOST}
+    receiver-queue: ${RECEIVER_QUEUE_NAME}
+    receiver-routing-key: ${RECEIVER_ROUTING_KEY}
+    ping-queue: ${PING_QUEUE_NAME}
+    ping-routing-key: ${PING_ROUTING_KEY}
+    exchange-name: ${RABBIT_EXCHANGE_NAME}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics,prometheus,health

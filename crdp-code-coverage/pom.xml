@@ -17,7 +17,7 @@
     <dependencies>
         <dependency>
             <groupId>ca.bc.gov.open</groupId>
-            <artifactId>jag-crdp-application</artifactId>
+            <artifactId>jag-crdp-transmit-receiver</artifactId>
             <version>1.0.0</version>
             <scope>compile</scope>
         </dependency>
