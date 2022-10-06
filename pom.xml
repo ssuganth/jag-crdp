@@ -28,10 +28,10 @@
 
     <modules>
         <module>jag-crdp-transmit-receiver</module>
-        <module>jag-crdp-transmit-transformer</module>
         <module>jag-crdp-transmit-sender</module>
         <module>jag-crdp-process-receiver</module>
         <module>jag-crdp-common-models</module>
+        <module>jag-crdp-transmit-models</module>
         <module>crdp-code-coverage</module>
     </modules>
 

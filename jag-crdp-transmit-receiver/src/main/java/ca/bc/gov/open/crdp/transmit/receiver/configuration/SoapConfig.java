@@ -3,6 +3,9 @@ package ca.bc.gov.open.crdp.transmit.receiver.configuration;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import java.util.HashMap;
+import java.util.Map;
+import javax.xml.soap.SOAPMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.ApplicationContext;
@@ -16,10 +19,6 @@ import org.springframework.ws.config.annotation.WsConfigurerAdapter;
 import org.springframework.ws.soap.SoapVersion;
 import org.springframework.ws.soap.saaj.SaajSoapMessageFactory;
 import org.springframework.ws.transport.http.MessageDispatcherServlet;
-
-import javax.xml.soap.SOAPMessage;
-import java.util.HashMap;
-import java.util.Map;
 
 @EnableWs
 @Configuration

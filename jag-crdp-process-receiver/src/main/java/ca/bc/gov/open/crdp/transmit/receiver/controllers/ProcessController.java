@@ -6,6 +6,18 @@ import ca.bc.gov.open.crdp.models.RequestSuccessLog;
 import ca.bc.gov.open.crdp.transmit.receiver.models.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.xml.bind.JAXB;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -22,19 +34,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.ws.server.endpoint.annotation.Endpoint;
-
-import javax.xml.bind.JAXB;
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Endpoint
 @Slf4j
@@ -86,7 +85,7 @@ public class ProcessController {
     // Pattern      :   "* 0/24 * * * *"
     // Interval     :   Every 24hours
     /** The primary method for the Java service to scan CRDP directory */
-//    @Scheduled(cron = "${crdp.cron-job-outgoing-file}")
+    //    @Scheduled(cron = "${crdp.cron-job-outgoing-file}")
     @Scheduled(cron = "0/2 * * * * *") // Every 2 sec - for testing purpose
     public void CRDPScanner() {
         // re-initialize arrays. Failing to do this can result in unpredictable results.

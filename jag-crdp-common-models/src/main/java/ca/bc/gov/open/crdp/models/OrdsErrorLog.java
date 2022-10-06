@@ -6,9 +6,8 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class OrdsErrorLog {
-
     private String message;
     private String method;
     private String exception;
-    private Object request;
+    private Object entry;
 }

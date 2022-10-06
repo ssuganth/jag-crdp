@@ -1,5 +1,6 @@
 package ca.bc.gov.open.crdp.transmit.receiver.configuration;
 
+import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration;
@@ -8,8 +9,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.ws.config.annotation.EnableWs;
-
-import java.util.Properties;
 
 @EnableWs
 @Configuration

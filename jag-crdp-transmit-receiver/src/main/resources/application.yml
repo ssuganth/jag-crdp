@@ -16,9 +16,12 @@ crdp:
     ords-host: ${ORDS_HOST}
     receiver-queue: ${RECEIVER_QUEUE_NAME}
     receiver-routing-key: ${RECEIVER_ROUTING_KEY}
-    ping-queue: ${PING_QUEUE_NAME}
-    ping-routing-key: ${PING_ROUTING_KEY}
     exchange-name: ${RABBIT_EXCHANGE_NAME}
+
+spring:
+  rabbitmq:
+    host: ${RABBIT_MQ_HOST}
+    port: 5672
 
 management:
   endpoints:

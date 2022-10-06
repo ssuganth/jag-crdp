@@ -6,9 +6,11 @@ import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@ComponentScan
 public class RabbitMqConfig {
 
     private final QueueConfig queueConfig;
@@ -18,15 +20,9 @@ public class RabbitMqConfig {
         this.queueConfig = queueConfig;
     }
 
-    @Bean(name = "ca.bc.gov.open.crdp.transmit.receiver-queue")
+    @Bean(name = "receiver-queue")
     public Queue receiverQueue() {
         return new Queue(queueConfig.getReceiverQueueName(), false);
-    }
-
-
-    @Bean(name = "ping-queue")
-    public Queue testQueue() {
-        return new Queue(queueConfig.getPingQueueName(), false);
     }
 
     @Bean
@@ -41,11 +37,10 @@ public class RabbitMqConfig {
 
     @Bean
     public Declarables binding(
-            @Qualifier("ca.bc.gov.open.crdp.transmit.receiver-queue") Queue receiverQueue,
-            @Qualifier("ping-queue") Queue testQueue,
-            DirectExchange exchange) {
+            @Qualifier("receiver-queue") Queue receiverQueue, DirectExchange exchange) {
         return new Declarables(
-                BindingBuilder.bind(receiverQueue).to(exchange).with(queueConfig.getReceiverRoutingkey()),
-                BindingBuilder.bind(testQueue).to(exchange).with(queueConfig.getPingRoutingKey()));
+                BindingBuilder.bind(receiverQueue)
+                        .to(exchange)
+                        .with(queueConfig.getReceiverRoutingkey()));
     }
 }

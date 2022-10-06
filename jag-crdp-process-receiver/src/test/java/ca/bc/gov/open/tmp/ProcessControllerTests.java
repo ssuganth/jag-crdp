@@ -3,10 +3,9 @@ package ca.bc.gov.open.tmp;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.*;
 
-import ca.bc.gov.open.tmp.controllers.ProcessController;
 import ca.bc.gov.open.crdp.exceptions.ORDSException;
-import ca.bc.gov.open.crdp.models.*;
-import ca.bc.gov.open.tmp.models.*;
+import ca.bc.gov.open.crdp.transmit.receiver.controllers.ProcessController;
+import ca.bc.gov.open.crdp.transmit.receiver.models.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
