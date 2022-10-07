@@ -5,7 +5,7 @@ import static org.mockito.Mockito.*;
 import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.transmit.models.GenerateIncomingReqFileResponse;
 import ca.bc.gov.open.crdp.transmit.receiver.configuration.QueueConfig;
-import ca.bc.gov.open.crdp.transmit.receiver.controllers.ReceivingController;
+import ca.bc.gov.open.crdp.transmit.receiver.services.ReceiverService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
@@ -28,7 +28,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class ReceivingControllerTests {
+public class ReceiverServiceTests {
     private String outputDir;
     @Mock private ObjectMapper objectMapper;
     @Mock private JavaMailSender emailSender;
@@ -41,7 +41,7 @@ public class ReceivingControllerTests {
 
     private QueueConfig queueConfig;
 
-    @Mock private ReceivingController controller;
+    @Mock private ReceiverService controller;
 
     @BeforeEach
     public void setUp() throws IOException {
@@ -49,7 +49,7 @@ public class ReceivingControllerTests {
         MockitoAnnotations.openMocks(this);
 
         controller =
-                new ReceivingController(
+                new ReceiverService(
                         receiverQueue,
                         amqpAdmin,
                         queueConfig,
@@ -83,7 +83,7 @@ public class ReceivingControllerTests {
                 .thenReturn(responseEntity);
 
         controller =
-                new ReceivingController(
+                new ReceiverService(
                         receiverQueue,
                         amqpAdmin,
                         queueConfig,
@@ -162,7 +162,7 @@ public class ReceivingControllerTests {
                 .thenReturn(responseEntity);
 
         controller =
-                new ReceivingController(
+                new ReceiverService(
                         receiverQueue,
                         amqpAdmin,
                         queueConfig,

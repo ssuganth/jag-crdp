@@ -1,4 +1,4 @@
-package ca.bc.gov.open.crdp.transmit.receiver.controllers;
+package ca.bc.gov.open.crdp.transmit.receiver.services;
 
 import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.models.OrdsErrorLog;

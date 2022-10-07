@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReceiverPub implements Serializable {
+public class SaveDataExchangeFileRequest implements Serializable {
     private String fileName;
     private String xmlString;
     private String dataExchangeFileSeqNo;

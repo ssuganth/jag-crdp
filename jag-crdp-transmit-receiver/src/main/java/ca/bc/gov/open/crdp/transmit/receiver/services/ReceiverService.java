@@ -1,6 +1,7 @@
-package ca.bc.gov.open.crdp.transmit.receiver.controllers;
+package ca.bc.gov.open.crdp.transmit.receiver.services;
 
 import ca.bc.gov.open.crdp.ErrorHandler;
+import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.models.MqErrorLog;
 import ca.bc.gov.open.crdp.models.OrdsErrorLog;
 import ca.bc.gov.open.crdp.models.RequestSuccessLog;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.StringWriter;
 import java.time.LocalDate;
+import java.util.Map;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -24,6 +26,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -39,7 +42,7 @@ import org.w3c.dom.Element;
 
 @Endpoint
 @Slf4j
-public class ReceivingController {
+public class ReceiverService {
 
     @Value("${crdp.host}")
     private String host = "https://127.0.0.1/";
@@ -49,14 +52,14 @@ public class ReceivingController {
 
     @Value("${crdp.notification-addresses}")
     public void setErrNotificationAddresses(String addresses) {
-        ReceivingController.errNotificationAddresses = addresses;
+        ReceiverService.errNotificationAddresses = addresses;
     }
 
     private static String errNotificationAddresses = "";
 
     @Value("${crdp.smtp-from}")
     public void setDefaultSmtpFrom(String from) {
-        ReceivingController.defaultSmtpFrom = from;
+        ReceiverService.defaultSmtpFrom = from;
     }
 
     private static String defaultSmtpFrom = "";
@@ -70,7 +73,7 @@ public class ReceivingController {
     private final QueueConfig queueConfig;
 
     @Autowired
-    public ReceivingController(
+    public ReceiverService(
             @Qualifier("receiver-queue") Queue receiverQueue,
             AmqpAdmin amqpAdmin,
             QueueConfig queueConfig,
@@ -96,14 +99,14 @@ public class ReceivingController {
     //    @Scheduled(cron = "${crdp.cron-job-incomming-file}")
     @Scheduled(cron = "0/2 * * * * *") // Every 2 sec - for testing purpose
     public void GenerateIncomingRequestFile() throws JsonProcessingException {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "req-file");
+        UriComponentsBuilder reqFileBuilder = UriComponentsBuilder.fromHttpUrl(host + "req-file");
 
-        HttpEntity<GenerateIncomingReqFileResponse> resp = null;
+        HttpEntity<GenerateIncomingReqFileResponse> reqFileResp = null;
         // Request part one and part two files
         try {
-            resp =
+            reqFileResp =
                     restTemplate.exchange(
-                            builder.toUriString(),
+                            reqFileBuilder.toUriString(),
                             HttpMethod.GET,
                             new HttpEntity<>(new HttpHeaders()),
                             GenerateIncomingReqFileResponse.class);
@@ -124,13 +127,58 @@ public class ReceivingController {
             return;
         }
 
-        String xmlString = xmlBuilder(resp.getBody());
-        ReceiverPub pub = new ReceiverPub(xmlString, resp.getBody().getDataExchangeFileSeqNo());
+        String xmlString = xmlBuilder(reqFileResp.getBody());
+        // Save Data Exchange File
+        if (xmlString != null) {
+            UriComponentsBuilder saveFileBuilder =
+                    UriComponentsBuilder.fromHttpUrl(host + "save-file");
+
+            HttpEntity<SaveDataExchangeFileRequest> payload =
+                    new HttpEntity<>(
+                            new SaveDataExchangeFileRequest(
+                                    reqFileResp.getBody().getFileName(),
+                                    xmlString,
+                                    reqFileResp.getBody().getDataExchangeFileSeqNo()),
+                            new HttpHeaders());
+
+            HttpEntity<Map<String, String>> saveFileResp = null;
+            try {
+                saveFileResp =
+                        restTemplate.exchange(
+                                saveFileBuilder.toUriString(),
+                                HttpMethod.POST,
+                                payload,
+                                new ParameterizedTypeReference<>() {});
+                if (saveFileResp.getBody().get("status").equals("0")) {
+                    throw new ORDSException("Save failed with status 0");
+                }
+                log.info(
+                        objectMapper.writeValueAsString(
+                                new RequestSuccessLog("Request Success", "saveDataExchangeFile")));
+            } catch (Exception ex) {
+                ErrorHandler.processError(); // TO BE COMPLETED
+                log.error(
+                        objectMapper.writeValueAsString(
+                                new OrdsErrorLog(
+                                        "Error received from ORDS",
+                                        "saveDataExchangeFile",
+                                        ex.getMessage(),
+                                        payload)));
+                return;
+            }
+        }
+
+        // Public xml (in ReceiverPub) for sender
+        ReceiverPub pub =
+                new ReceiverPub(
+                        reqFileResp.getBody().getFileName(),
+                        xmlString,
+                        reqFileResp.getBody().getDataExchangeFileSeqNo());
         try {
             this.rabbitTemplate.convertAndSend(
                     queueConfig.getTopicExchangeName(),
                     queueConfig.getReceiverRoutingkey(),
-                    resp.getBody());
+                    reqFileResp.getBody());
         } catch (Exception ex) {
             ErrorHandler.processError(); // TO BE COMPLETED
             log.error(
@@ -139,7 +187,7 @@ public class ReceivingController {
                                     "Enqueue failed",
                                     "generateIncomingRequestFile",
                                     ex.getMessage(),
-                                    resp.getBody())));
+                                    reqFileResp.getBody())));
             return;
         }
     }
