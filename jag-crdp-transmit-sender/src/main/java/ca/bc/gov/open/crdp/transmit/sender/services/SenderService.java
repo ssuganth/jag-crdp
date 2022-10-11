@@ -53,7 +53,7 @@ public class SenderService {
 
     private static String defaultSmtpFrom = "";
 
-    private final String tempFileDir = "temp-pdfs/";
+    private final String tempFileDir = "temp-xmls/";
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -120,14 +120,14 @@ public class SenderService {
     public void sendXmlFile(ReceiverPub xmlPub) throws JsonProcessingException {
         File f = null;
         try {
-            f = new File(tempFileDir + "TmpPDF" + UUID.randomUUID() + ".xml");
+            f = new File(tempFileDir + "TmpXML" + UUID.randomUUID() + ".xml");
             FileUtils.writeStringToFile(f, xmlPub.getXmlString(), StandardCharsets.UTF_8);
             // SCP the file to a server
             sftpTransfer(outFileDir + xmlPub.getFileName(), f);
             log.info(
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog(
-                                    "Request Success", "pdfTransformSCPByReference")));
+                                    "Request Success", "sendXmlFile")));
         } catch (Exception ex) {
             log.error(
                     objectMapper.writeValueAsString(
