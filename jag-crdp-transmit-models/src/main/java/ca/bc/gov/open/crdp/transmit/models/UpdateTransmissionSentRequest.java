@@ -9,11 +9,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReceiverPub implements Serializable {
-    private String fileName;
-    private String xmlString;
+public class UpdateTransmissionSentRequest implements Serializable {
+    private List<String> partOneIds;
+    private List<String> regModIds;
+    private List<String> partTwoIds;
     private String dataExchangeFileSeqNo;
-    private List<String> partOneFileIds;
-    private List<String> regModFileIds;
-    private List<String> partTwoFileIds;
+    private String currentDate;
 }

@@ -7,10 +7,13 @@ import ca.bc.gov.open.crdp.models.OrdsErrorLog;
 import ca.bc.gov.open.crdp.models.RequestSuccessLog;
 import ca.bc.gov.open.crdp.transmit.models.*;
 import ca.bc.gov.open.crdp.transmit.receiver.configuration.QueueConfig;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.File;
+import java.io.IOException;
 import java.io.StringWriter;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -72,6 +75,10 @@ public class ReceiverService {
     private final Queue receiverQueue;
     private final QueueConfig queueConfig;
 
+    private List<String> partOneIds;
+    private List<String> regModFileIds;
+    private List<String> partTwoIds;
+
     @Autowired
     public ReceiverService(
             @Qualifier("receiver-queue") Queue receiverQueue,
@@ -88,6 +95,10 @@ public class ReceiverService {
         this.objectMapper = objectMapper;
         this.rabbitTemplate = rabbitTemplate;
         this.queueConfig = queueConfig;
+
+        partOneIds = new ArrayList<>();
+        regModFileIds = new ArrayList<>();
+        partTwoIds = new ArrayList<>();
     }
 
     // CRON Job Name:   CRDP Transmit Outgoing File
@@ -97,8 +108,12 @@ public class ReceiverService {
     @PayloadRoot(localPart = "generateIncomingRequestFile")
     @ResponsePayload
     //    @Scheduled(cron = "${crdp.cron-job-incomming-file}")
-    @Scheduled(cron = "0/2 * * * * *") // Every 2 sec - for testing purpose
-    public void GenerateIncomingRequestFile() throws JsonProcessingException {
+    @Scheduled(cron = "0/5 * * * * *") // Every 2 sec - for testing purpose
+    public void GenerateIncomingRequestFile() throws IOException {
+        partOneIds.clear();
+        regModFileIds.clear();
+        partTwoIds.clear();
+
         UriComponentsBuilder reqFileBuilder = UriComponentsBuilder.fromHttpUrl(host + "req-file");
 
         HttpEntity<GenerateIncomingReqFileResponse> reqFileResp = null;
@@ -129,56 +144,58 @@ public class ReceiverService {
 
         String xmlString = xmlBuilder(reqFileResp.getBody());
         // Save Data Exchange File
-        if (xmlString != null) {
-            UriComponentsBuilder saveFileBuilder =
-                    UriComponentsBuilder.fromHttpUrl(host + "save-file");
+        if (xmlString == null) {
+            return;
+        }
 
-            HttpEntity<SaveDataExchangeFileRequest> payload =
-                    new HttpEntity<>(
-                            new SaveDataExchangeFileRequest(
-                                    reqFileResp.getBody().getFileName(),
-                                    xmlString,
-                                    reqFileResp.getBody().getDataExchangeFileSeqNo()),
-                            new HttpHeaders());
+        UriComponentsBuilder saveFileBuilder = UriComponentsBuilder.fromHttpUrl(host + "save-file");
 
-            HttpEntity<Map<String, String>> saveFileResp = null;
-            try {
-                saveFileResp =
-                        restTemplate.exchange(
-                                saveFileBuilder.toUriString(),
-                                HttpMethod.POST,
-                                payload,
-                                new ParameterizedTypeReference<>() {});
-                if (saveFileResp.getBody().get("status").equals("0")) {
-                    throw new ORDSException("Save failed with status 0");
-                }
-                log.info(
-                        objectMapper.writeValueAsString(
-                                new RequestSuccessLog("Request Success", "saveDataExchangeFile")));
-            } catch (Exception ex) {
-                ErrorHandler.processError(); // TO BE COMPLETED
-                log.error(
-                        objectMapper.writeValueAsString(
-                                new OrdsErrorLog(
-                                        "Error received from ORDS",
-                                        "saveDataExchangeFile",
-                                        ex.getMessage(),
-                                        payload)));
-                return;
+        HttpEntity<SaveDataExchangeFileRequest> payload =
+                new HttpEntity<>(
+                        new SaveDataExchangeFileRequest(
+                                reqFileResp.getBody().getFileName(),
+                                xmlString,
+                                reqFileResp.getBody().getDataExchangeFileSeqNo()),
+                        new HttpHeaders());
+
+        HttpEntity<Map<String, String>> saveFileResp = null;
+        try {
+            saveFileResp =
+                    restTemplate.exchange(
+                            saveFileBuilder.toUriString(),
+                            HttpMethod.POST,
+                            payload,
+                            new ParameterizedTypeReference<>() {});
+            if (saveFileResp.getBody().get("responseCd").equals("0")) {
+                throw new ORDSException(saveFileResp.getBody().get("responseMessageTxt"));
             }
+            log.info(
+                    objectMapper.writeValueAsString(
+                            new RequestSuccessLog("Request Success", "saveDataExchangeFile")));
+        } catch (Exception ex) {
+            ErrorHandler.processError(); // TO BE COMPLETED
+            log.error(
+                    objectMapper.writeValueAsString(
+                            new OrdsErrorLog(
+                                    "Error received from ORDS",
+                                    "saveDataExchangeFile",
+                                    ex.getMessage(),
+                                    payload)));
+            return;
         }
 
         // Public xml (in ReceiverPub) for sender
-        ReceiverPub pub =
-                new ReceiverPub(
-                        reqFileResp.getBody().getFileName(),
-                        xmlString,
-                        reqFileResp.getBody().getDataExchangeFileSeqNo());
+        ReceiverPub pub = new ReceiverPub();
+        pub.setFileName(reqFileResp.getBody().getFileName());
+        pub.setDataExchangeFileSeqNo(reqFileResp.getBody().getDataExchangeFileSeqNo());
+        pub.setXmlString(xmlString);
+        pub.setPartOneFileIds(partOneIds);
+        pub.setRegModFileIds(regModFileIds);
+        pub.setPartTwoFileIds(partTwoIds);
+
         try {
             this.rabbitTemplate.convertAndSend(
-                    queueConfig.getTopicExchangeName(),
-                    queueConfig.getReceiverRoutingkey(),
-                    reqFileResp.getBody());
+                    queueConfig.getTopicExchangeName(), queueConfig.getReceiverRoutingkey(), pub);
         } catch (Exception ex) {
             ErrorHandler.processError(); // TO BE COMPLETED
             log.error(
@@ -203,26 +220,24 @@ public class ReceiverService {
             Element rootElement = doc.createElement("CRDPFORMS");
             doc.appendChild(rootElement);
 
-            // CRDPAPPIN99
-            Element crdpappin99 = doc.createElement("CRDPAPPIN99");
-            createXmlNode("Record_Type", "99", crdpappin99, doc);
+            // CRDPAPPIN01
+            Element crdpappin01 = doc.createElement("CRDPAPPIN01");
+            createXmlNode("Record_Type", "01", crdpappin01, doc);
+            createXmlNode("File_Name", fileComponent.getFileName(), crdpappin01, doc);
+            // UTC or local date?
+            createXmlNode("File_Date", LocalDate.now().toString(), crdpappin01, doc);
             createXmlNode(
-                    "Part1_RecordCount",
-                    String.format("%06d", fileComponent.getPartOneCount()),
-                    crdpappin99,
+                    "Terms_Accepted",
+                    "The Province or Territory of British Columbia hereby confirms that it agrees to comply with the terms and conditions of use of the FTP process",
+                    crdpappin01,
                     doc);
-            createXmlNode(
-                    "Part2_RecordCount",
-                    String.format("%06d", fileComponent.getPartTwoCount()),
-                    crdpappin99,
-                    doc);
-            rootElement.appendChild(crdpappin99);
-            // END CRDPAPPIN99
+            rootElement.appendChild(crdpappin01);
+            // END CRDPAPPIN01
 
             // CRDPAPPINPART1
             if (fileComponent.getPartOneData() != null) {
-                Element crdpappinPart1 = doc.createElement("CRDPAPPINPART1");
                 for (PartOneData one : fileComponent.getPartOneData()) {
+                    Element crdpappinPart1 = doc.createElement("CRDPAPPINPART1");
                     createXmlNode("Record_Type", one.getRecordType(), crdpappinPart1, doc);
                     createXmlNode("Court_Number", one.getCourtNumber(), crdpappinPart1, doc);
                     createXmlNode(
@@ -278,15 +293,16 @@ public class ReceiverService {
                             one.getPetitionSignedDate(),
                             crdpappinPart1,
                             doc);
+                    partOneIds.add(one.getPhysicalFileId());
+                    rootElement.appendChild(crdpappinPart1);
                 }
-                rootElement.appendChild(crdpappinPart1);
             }
             // END CRDPAPPINPART1
 
             // CRDPAPPINPART1-REGNUMBER_MOD
             if (fileComponent.getRegModData() != null) {
-                Element crdpappinMod = doc.createElement("CRDPAPPINPART1-REGNUMBER_MOD");
                 for (RegModData mod : fileComponent.getRegModData()) {
+                    Element crdpappinMod = doc.createElement("CRDPAPPINPART1-REGNUMBER_MOD");
                     createXmlNode("Record_Type", mod.getRecordType(), crdpappinMod, doc);
                     createXmlNode("Court_Number", mod.getCourtNumber(), crdpappinMod, doc);
                     createXmlNode(
@@ -304,15 +320,16 @@ public class ReceiverService {
                             mod.getOriginalDivorceRegNumber(),
                             crdpappinMod,
                             doc);
+                    regModFileIds.add(mod.getPhysicalFileId());
+                    rootElement.appendChild(crdpappinMod);
                 }
-                rootElement.appendChild(crdpappinMod);
             }
             // END CRDPAPPINPART1-REGNUMBER_MOD
 
             // CRDPAPPINPART2
             if (fileComponent.getPartTwoData() != null) {
-                Element crdpappinPart2 = doc.createElement("CRDPAPPINPART2");
                 for (PartTwoData two : fileComponent.getPartTwoData()) {
+                    Element crdpappinPart2 = doc.createElement("CRDPAPPINPART2");
                     createXmlNode("Record_Type", two.getRecordType(), crdpappinPart2, doc);
                     createXmlNode("Court_Number", two.getCourtNumber(), crdpappinPart2, doc);
                     createXmlNode(
@@ -339,24 +356,27 @@ public class ReceiverService {
                             two.getDispositionSignedDate(),
                             crdpappinPart2,
                             doc);
+                    partTwoIds.add(two.getPhysicalFileId());
+                    rootElement.appendChild(crdpappinPart2);
                 }
-                rootElement.appendChild(crdpappinPart2);
             }
             // END CRDPAPPINPART2
 
-            // CRDPAPPIN01
-            Element crdpappin01 = doc.createElement("CRDPAPPIN01");
-            createXmlNode("Record_Type", "01", crdpappin01, doc);
-            createXmlNode("File_Name", fileComponent.getFileName(), crdpappin01, doc);
-            // UTC or local date?
-            createXmlNode("File_Date", LocalDate.now().toString(), crdpappin01, doc);
+            // CRDPAPPIN99
+            Element crdpappin99 = doc.createElement("CRDPAPPIN99");
+            createXmlNode("Record_Type", "99", crdpappin99, doc);
             createXmlNode(
-                    "Terms_Accepted",
-                    "The Province or Territory of British Columbia hereby confirms that it agrees to comply with the terms and conditions of use of the FTP process",
-                    crdpappin01,
+                    "Part1_RecordCount",
+                    String.format("%06d", fileComponent.getPartOneCount()),
+                    crdpappin99,
                     doc);
-            rootElement.appendChild(crdpappin01);
-            // END CRDPAPPIN01
+            createXmlNode(
+                    "Part2_RecordCount",
+                    String.format("%06d", fileComponent.getPartTwoCount()),
+                    crdpappin99,
+                    doc);
+            rootElement.appendChild(crdpappin99);
+            // END CRDPAPPIN99
 
             // Write the content into XML file
             DOMSource source = new DOMSource(doc);
@@ -369,8 +389,8 @@ public class ReceiverService {
             transformer.transform(source, new StreamResult(writer));
 
             // if output file to local dir
-            // StreamResult result = new StreamResult(new File(fileComponent.getFileName()));
-            // transformer.transform(source, result);
+            StreamResult result = new StreamResult(new File(fileComponent.getFileName()));
+            transformer.transform(source, result);
         } catch (Exception ex) {
             log.error("Error creating XML File:" + ex.getMessage());
         }

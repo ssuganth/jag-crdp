@@ -19,25 +19,16 @@ public class ConsumerService {
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public ConsumerService(ObjectMapper objectMapper, SenderService hsrService) {
+    public ConsumerService(ObjectMapper objectMapper, SenderService senderService) {
         this.objectMapper = objectMapper;
-        this.senderService = hsrService;
+        this.senderService = senderService;
     }
 
     @RabbitListener(queues = "${crdp.receiver-queue}")
-    public void receiveXmlMessage(@Payload Message<ReceiverPub> message)
-            throws IOException, InterruptedException {
-        try {
-            senderService.update(message.getPayload());
-        } catch (Exception ignored) {
-            log.error("ERROR: " + message + " not processed successfully");
-        }
-
-        try {
-            senderService.send(message.getPayload());
-        } catch (Exception ignored) {
-            log.error("ERROR: " + message + " not processed successfully");
-        }
+    public void receiveReceiverPubMessage(@Payload Message<ReceiverPub> message)
+            throws IOException {
+        senderService.updateTransmissionSent(message.getPayload());
+        senderService.sendXmlFile(message.getPayload());
         System.out.println(objectMapper.writeValueAsString(message.getPayload()));
     }
 }

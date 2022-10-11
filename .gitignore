@@ -40,3 +40,5 @@ cc-test-reporter
 
 /src/test/resources/test/
 
+/.ssh/*
+/*.xml

@@ -12,16 +12,21 @@ crdp:
   smtp-password: ${SMTP_PASSWORD}
   cron-job-incomming-file:  ${CRON_JOB_INCOMMING_FILE}
   cron-job-outgoing-file:  ${CRON_JOB_OUTGOING_FILE}
-  rabbitmq:
-    ords-host: ${ORDS_HOST}
-    receiver-queue: ${RECEIVER_QUEUE_NAME}
-    receiver-routing-key: ${RECEIVER_ROUTING_KEY}
-    exchange-name: ${RABBIT_EXCHANGE_NAME}
+  receiver-queue: ${RECEIVER_QUEUE_NAME}
 
 spring:
   rabbitmq:
     host: ${RABBIT_MQ_HOST}
     port: 5672
+
+bcgov:
+  sftp:
+    host: ${SFEG_HOST:localhost}
+    port: ${SFEG_PORT:22}
+    username: ${SFEG_USERNAME}
+    remote-location: ${NFS_DIR}
+    known-hosts-file-name: ${SFTP_KNOWN_HOSTS}
+    ssh-private-key: ${SFTP_PRIVATE_KEY}
 
 management:
   endpoints:
@@ -30,4 +35,4 @@ management:
         include: metrics,prometheus,health
 
 server:
-  port: 8081
+  port: 8082
