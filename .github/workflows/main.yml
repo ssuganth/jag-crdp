@@ -63,7 +63,7 @@ jobs:
 
       # Runs build steps
       - name: Maven Package
-        run: mvn -ntp clean package
+        run: mvn -ntp clean package -Dmaven.test.skip=true
 
       - name: Maven Verify
         run: mvn -ntp clean verify
