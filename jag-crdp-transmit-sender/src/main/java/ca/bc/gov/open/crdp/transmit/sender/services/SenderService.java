@@ -74,7 +74,7 @@ public class SenderService {
         this.sftpProperties = sftpProperties;
     }
 
-    public void updateTransmissionSent(ReceiverPub xmlPub) throws JsonProcessingException {
+    public int updateTransmissionSent(ReceiverPub xmlPub) throws JsonProcessingException {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "update-sent");
 
         UpdateTransmissionSentRequest req = new UpdateTransmissionSentRequest();
@@ -104,8 +104,9 @@ public class SenderService {
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog("Request Success", "updateTransmissionSent")));
 
+            return 0;
         } catch (Exception ex) {
-            ErrorHandler.processError(); // TO BE COMPLETED
+            ErrorHandler.processError(errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -113,11 +114,11 @@ public class SenderService {
                                     "updateTransmissionSent",
                                     ex.getMessage(),
                                     payload)));
-            return;
+            return -1;
         }
     }
 
-    public void sendXmlFile(ReceiverPub xmlPub) throws JsonProcessingException {
+    public int sendXmlFile(ReceiverPub xmlPub) throws JsonProcessingException {
         File f = null;
         try {
             f = new File(tempFileDir + "TmpXML" + UUID.randomUUID() + ".xml");
@@ -126,8 +127,8 @@ public class SenderService {
             sftpTransfer(outFileDir + xmlPub.getFileName(), f);
             log.info(
                     objectMapper.writeValueAsString(
-                            new RequestSuccessLog(
-                                    "Request Success", "sendXmlFile")));
+                            new RequestSuccessLog("Request Success", "sendXmlFile")));
+            return 0;
         } catch (Exception ex) {
             log.error(
                     objectMapper.writeValueAsString(
@@ -136,6 +137,7 @@ public class SenderService {
                                     "sendXmlFile",
                                     ex.getMessage(),
                                     xmlPub)));
+            return -1;
         } finally {
             if (f != null && f.exists()) {
                 if (!f.delete()) {

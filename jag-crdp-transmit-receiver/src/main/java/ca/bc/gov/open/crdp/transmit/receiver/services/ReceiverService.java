@@ -6,9 +6,9 @@ import ca.bc.gov.open.crdp.models.MqErrorLog;
 import ca.bc.gov.open.crdp.models.OrdsErrorLog;
 import ca.bc.gov.open.crdp.models.RequestSuccessLog;
 import ca.bc.gov.open.crdp.transmit.models.*;
+import ca.bc.gov.open.crdp.transmit.receiver.configuration.MailConfig;
 import ca.bc.gov.open.crdp.transmit.receiver.configuration.QueueConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.time.LocalDate;
@@ -50,9 +50,6 @@ public class ReceiverService {
     @Value("${crdp.host}")
     private String host = "https://127.0.0.1/";
 
-    @Value("${crdp.out-file-dir}")
-    private String outFileDir = "/";
-
     @Value("${crdp.notification-addresses}")
     public void setErrNotificationAddresses(String addresses) {
         ReceiverService.errNotificationAddresses = addresses;
@@ -70,7 +67,7 @@ public class ReceiverService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RabbitTemplate rabbitTemplate;
-    private final JavaMailSender emailSender;
+    private final MailConfig emailSender;
     private final AmqpAdmin amqpAdmin;
     private final Queue receiverQueue;
     private final QueueConfig queueConfig;
@@ -109,7 +106,7 @@ public class ReceiverService {
     @ResponsePayload
     //    @Scheduled(cron = "${crdp.cron-job-incomming-file}")
     @Scheduled(cron = "0/5 * * * * *") // Every 2 sec - for testing purpose
-    public void GenerateIncomingRequestFile() throws IOException {
+    public int GenerateIncomingRequestFile() throws IOException {
         partOneIds.clear();
         regModFileIds.clear();
         partTwoIds.clear();
@@ -131,7 +128,8 @@ public class ReceiverService {
                                     "Request Success", "generateIncomingRequestFile")));
 
         } catch (Exception ex) {
-            ErrorHandler.processError(); // TO BE COMPLETED
+            ErrorHandler.processError(
+                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -139,13 +137,13 @@ public class ReceiverService {
                                     "generateIncomingRequestFile",
                                     ex.getMessage(),
                                     null)));
-            return;
+            return -1;
         }
 
         String xmlString = xmlBuilder(reqFileResp.getBody());
         // Save Data Exchange File
         if (xmlString == null) {
-            return;
+            return -2;
         }
 
         UriComponentsBuilder saveFileBuilder = UriComponentsBuilder.fromHttpUrl(host + "save-file");
@@ -173,7 +171,8 @@ public class ReceiverService {
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog("Request Success", "saveDataExchangeFile")));
         } catch (Exception ex) {
-            ErrorHandler.processError(); // TO BE COMPLETED
+            ErrorHandler.processError(
+                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -181,7 +180,7 @@ public class ReceiverService {
                                     "saveDataExchangeFile",
                                     ex.getMessage(),
                                     payload)));
-            return;
+            return -3;
         }
 
         // Public xml (in ReceiverPub) for sender
@@ -197,7 +196,8 @@ public class ReceiverService {
             this.rabbitTemplate.convertAndSend(
                     queueConfig.getTopicExchangeName(), queueConfig.getReceiverRoutingkey(), pub);
         } catch (Exception ex) {
-            ErrorHandler.processError(); // TO BE COMPLETED
+            ErrorHandler.processError(
+                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new MqErrorLog(
@@ -205,11 +205,12 @@ public class ReceiverService {
                                     "generateIncomingRequestFile",
                                     ex.getMessage(),
                                     reqFileResp.getBody())));
-            return;
+            return -4;
         }
+        return 0;
     }
 
-    private String xmlBuilder(GenerateIncomingReqFileResponse fileComponent) {
+    public String xmlBuilder(GenerateIncomingReqFileResponse fileComponent) {
         StringWriter writer = new StringWriter();
         try {
             DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
@@ -389,10 +390,11 @@ public class ReceiverService {
             transformer.transform(source, new StreamResult(writer));
 
             // if output file to local dir
-            StreamResult result = new StreamResult(new File(fileComponent.getFileName()));
-            transformer.transform(source, result);
+            // StreamResult result = new StreamResult(new File(fileComponent.getFileName()));
+            // transformer.transform(source, result);
         } catch (Exception ex) {
             log.error("Error creating XML File:" + ex.getMessage());
+            return null;
         }
         return writer.getBuffer().toString();
     }

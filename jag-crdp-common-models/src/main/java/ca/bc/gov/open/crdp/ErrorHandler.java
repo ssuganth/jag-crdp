@@ -3,9 +3,12 @@ package ca.bc.gov.open.crdp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.SimpleMailMessage;
 
+@Slf4j
 public class ErrorHandler {
-    public static void processError() {
+    public static void processError(String targetAddresses, String defaultSmtpFrom, String errMsg) {
         String integrationNameMsg = "CRDP";
         String errorTypeMsg = "NA";
         String errorSubtypeMsg = "NA";
@@ -28,15 +31,18 @@ public class ErrorHandler {
         List<String> nonVerboseSendToList = null;
         List<String> nonVerboseCopyToList = null;
 
-        // TO BE CONT..
         String subject = "An error was received from the CRDP System";
 
-        //        String[] addresses = errNotificationAddresses.split(" ,");
-        //        SimpleMailMessage message = new SimpleMailMessage();
-        //        message.setFrom(defaultSmtpFrom);
-        //        message.setSubject(subject);
-        //        message.setText(errMsg);
-        //        message.setTo(addresses);
-        //        emailSender.send(message);
+        try {
+            String[] addresses = targetAddresses.split(" ,");
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(defaultSmtpFrom); // watt.common.defaultSmtpFrom
+            message.setSubject(subject);
+            message.setText(subjectMsg + "\n" + errMsg);
+            message.setTo(addresses);
+            //            emailSender.send(message);
+        } catch (Exception ex) {
+            log.error("Failed to send email notification to: " + targetAddresses);
+        }
     }
 }
