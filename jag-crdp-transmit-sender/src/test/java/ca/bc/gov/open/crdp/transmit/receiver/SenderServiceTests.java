@@ -4,7 +4,6 @@ import static org.mockito.Mockito.*;
 
 import ca.bc.gov.open.crdp.transmit.models.ReceiverPub;
 import ca.bc.gov.open.crdp.transmit.sender.services.SenderService;
-import ca.bc.gov.open.sftp.starter.JschSessionProvider;
 import ca.bc.gov.open.sftp.starter.SftpProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,24 +22,21 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.client.RestTemplate;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SenderServiceTests {
     @Mock private ObjectMapper objectMapper;
-    @Mock private JavaMailSender emailSender;
     @Mock private RestTemplate restTemplate;
     @Mock private SftpProperties sftpProperties;
     @Mock private SenderService controller;
-    @Mock private JschSessionProvider jschSessionProvider;
 
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
         controller =
                 Mockito.spy(
-                        new SenderService(emailSender, restTemplate, objectMapper, sftpProperties));
+                        new SenderService(restTemplate, objectMapper, sftpProperties));
     }
 
     @Test

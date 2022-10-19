@@ -32,7 +32,6 @@
             <modules>
                 <module>libs/crdp-starters-bom</module>
                 <module>libs/crdp-sftp-starter</module>
-                <module>libs/crdp-mail-it</module>
             </modules>
             <build>
                 <plugins>
@@ -61,7 +60,6 @@
         <profile>
             <id>transmit-receiver</id>
             <modules>
-                <module>libs/crdp-mail-it</module>
                 <module>jag-crdp-transmit-receiver</module>
                 <module>jag-crdp-transmit-models</module>
                 <module>jag-crdp-common-models</module>
@@ -73,7 +71,6 @@
             <modules>
                 <module>libs/crdp-starters-bom</module>
                 <module>libs/crdp-sftp-starter</module>
-                <module>libs/crdp-mail-it</module>
                 <module>jag-crdp-transmit-sender</module>
                 <module>jag-crdp-transmit-models</module>
                 <module>jag-crdp-common-models</module>
@@ -81,10 +78,9 @@
             </modules>
         </profile>
         <profile>
-            <id>process-receiver</id>
+            <id>process-scanner</id>
             <modules>
-                <module>libs/crdp-mail-it</module>
-                <module>jag-crdp-process-receiver</module>
+                <module>jag-crdp-process-scanner</module>
                 <module>jag-crdp-common-models</module>
                 <module>crdp-code-coverage</module>
             </modules>

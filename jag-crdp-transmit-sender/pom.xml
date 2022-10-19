@@ -193,12 +193,6 @@
         </dependency>
         <dependency>
             <groupId>ca.bc.gov.open</groupId>
-            <artifactId>jag-crdp-process-receiver</artifactId>
-            <version>1.0.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>ca.bc.gov.open</groupId>
             <artifactId>crdp-sftp-starter</artifactId>
             <version>0.2.2</version>
             <scope>compile</scope>

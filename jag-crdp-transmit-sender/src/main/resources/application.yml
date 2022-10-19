@@ -4,11 +4,8 @@ security:
     username: ${BASIC_AUTH_USER}
 crdp:
   host: ${ORDS_HOST}
-  in-file-dir: ${INCOMING_FILE_DIR}
-  out-file-dir: ${OUTGOING_FILE_DIR}
-  cron-job-incomming-file:  ${CRON_JOB_INCOMMING_FILE}
-  cron-job-outgoing-file:  ${CRON_JOB_OUTGOING_FILE}
   receiver-queue: ${RECEIVER_QUEUE_NAME}
+  out-file-dir: ${OUTGOING_FILE_DIR}
 
 spring:
   rabbitmq:

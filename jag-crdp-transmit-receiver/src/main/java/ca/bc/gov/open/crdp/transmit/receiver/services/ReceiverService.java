@@ -1,20 +1,15 @@
 package ca.bc.gov.open.crdp.transmit.receiver.services;
 
-import ca.bc.gov.open.crdp.ErrorHandler;
 import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.models.MqErrorLog;
 import ca.bc.gov.open.crdp.models.OrdsErrorLog;
 import ca.bc.gov.open.crdp.models.RequestSuccessLog;
 import ca.bc.gov.open.crdp.transmit.models.*;
-import ca.bc.gov.open.crdp.transmit.receiver.configuration.MailConfig;
 import ca.bc.gov.open.crdp.transmit.receiver.configuration.QueueConfig;
-import ca.bc.gov.open.mail.MailSendProperties;
-import ca.bc.gov.open.mail.NotificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.text.MessageFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -29,8 +24,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.joda.time.DateTime;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -41,7 +34,6 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -64,8 +56,6 @@ public class ReceiverService {
     private final AmqpAdmin amqpAdmin;
     private final Queue receiverQueue;
     private final QueueConfig queueConfig;
-    private final NotificationService notificationService;
-    private final MailSendProperties mailSendProperties;
 
     private List<String> partOneIds;
     private List<String> regModFileIds;
@@ -87,17 +77,13 @@ public class ReceiverService {
       QueueConfig queueConfig,
       RestTemplate restTemplate,
       ObjectMapper objectMapper,
-      RabbitTemplate rabbitTemplate,
-      NotificationService notificationService,
-      MailSendProperties mailSendProperties) {
+      RabbitTemplate rabbitTemplate) {
         this.receiverQueue = receiverQueue;
         this.amqpAdmin = amqpAdmin;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.rabbitTemplate = rabbitTemplate;
         this.queueConfig = queueConfig;
-        this.notificationService = notificationService;
-        this.mailSendProperties = mailSendProperties;
 
         partOneIds = new ArrayList<>();
         regModFileIds = new ArrayList<>();
@@ -134,8 +120,6 @@ public class ReceiverService {
                                     "Request Success", "generateIncomingRequestFile")));
 
         } catch (Exception ex) {
-//            ErrorHandler.processError(
-//                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -177,8 +161,6 @@ public class ReceiverService {
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog("Request Success", "saveDataExchangeFile")));
         } catch (Exception ex) {
-//            ErrorHandler.processError(
-//                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -202,19 +184,6 @@ public class ReceiverService {
             this.rabbitTemplate.convertAndSend(
                     queueConfig.getTopicExchangeName(), queueConfig.getReceiverRoutingkey(), pub);
         } catch (Exception ex) {
-            if(StringUtils.isNotBlank(mailSendProperties.getDefaultEmail())) {
-                try {
-                    DateTimeFormatter subjectFt = DateTimeFormatter.ofPattern("MMM-dd-yyyy HH:mm:ss");
-                    String subject = MessageFormat.format(emailSubject, "CRDP", "NA", LocalDateTime.now().format(subjectFt));
-
-                    DateTimeFormatter contentFt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS");
-                    String content = MessageFormat.format(emailBody, "CRDP", "NA", "NA", LocalDateTime.now().format(contentFt));
-
-                    this.notificationService.notify(subject, content, mailSendProperties.getFromEmail(), mailSendProperties.getDefaultEmail());
-                } catch (Exception apiException) {
-                    log.error("Failed to send email notification: " + apiException.getMessage());
-                }
-            }
             log.error(
                     objectMapper.writeValueAsString(
                             new MqErrorLog(

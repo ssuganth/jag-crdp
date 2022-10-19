@@ -1,6 +1,5 @@
 package ca.bc.gov.open.crdp.transmit.sender.services;
 
-import ca.bc.gov.open.crdp.ErrorHandler;
 import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.models.OrdsErrorLog;
 import ca.bc.gov.open.crdp.models.RequestSuccessLog;
@@ -43,7 +42,6 @@ public class SenderService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-    private final JavaMailSender emailSender;
     private final SftpProperties sftpProperties;
 
     @Autowired
@@ -51,11 +49,9 @@ public class SenderService {
 
     @Autowired
     public SenderService(
-            JavaMailSender emailSender,
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             SftpProperties sftpProperties) {
-        this.emailSender = emailSender;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.sftpProperties = sftpProperties;

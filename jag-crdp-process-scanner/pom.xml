@@ -8,7 +8,7 @@
         <version>1.0.0</version>
     </parent>
 
-    <artifactId>jag-crdp-process-receiver</artifactId>
+    <artifactId>jag-crdp-process-scanner</artifactId>
     <version>1.0.0</version>
     <name>jag-crdp-process-receiver</name>
     <properties>

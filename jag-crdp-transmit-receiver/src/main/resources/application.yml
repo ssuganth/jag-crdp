@@ -4,9 +4,7 @@ security:
     username: ${BASIC_AUTH_USER}
 crdp:
   host: ${ORDS_HOST}
-  in-file-dir: ${INCOMING_FILE_DIR}
   out-file-dir: ${OUTGOING_FILE_DIR}
-  cron-job-incomming-file:  ${CRON_JOB_INCOMMING_FILE}
   cron-job-outgoing-file:  ${CRON_JOB_OUTGOING_FILE}
   rabbitmq:
     ords-host: ${ORDS_HOST}
@@ -18,12 +16,6 @@ spring:
   rabbitmq:
     host: ${RABBIT_MQ_HOST}
     port: 5672
-
-bcgov:
-  mail-it:
-    base-path: ${MAIL_IT_BASE_PATH:http://localhost:8099}
-    from-email: ${MAIL_IT_FROM_EMAIL}
-    default-email: ${MAIL_IT_DEFAULT_EMAIL}
 
 management:
   endpoints:
