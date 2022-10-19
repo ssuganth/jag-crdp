@@ -8,10 +8,16 @@ import ca.bc.gov.open.crdp.models.RequestSuccessLog;
 import ca.bc.gov.open.crdp.transmit.models.*;
 import ca.bc.gov.open.crdp.transmit.receiver.configuration.MailConfig;
 import ca.bc.gov.open.crdp.transmit.receiver.configuration.QueueConfig;
+import ca.bc.gov.open.mail.MailSendProperties;
+import ca.bc.gov.open.mail.NotificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +29,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.joda.time.DateTime;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -50,48 +58,46 @@ public class ReceiverService {
     @Value("${crdp.host}")
     private String host = "https://127.0.0.1/";
 
-    @Value("${crdp.notification-addresses}")
-    public void setErrNotificationAddresses(String addresses) {
-        ReceiverService.errNotificationAddresses = addresses;
-    }
-
-    private static String errNotificationAddresses = "";
-
-    @Value("${crdp.smtp-from}")
-    public void setDefaultSmtpFrom(String from) {
-        ReceiverService.defaultSmtpFrom = from;
-    }
-
-    private static String defaultSmtpFrom = "";
-
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RabbitTemplate rabbitTemplate;
-    private final MailConfig emailSender;
     private final AmqpAdmin amqpAdmin;
     private final Queue receiverQueue;
     private final QueueConfig queueConfig;
+    private final NotificationService notificationService;
+    private final MailSendProperties mailSendProperties;
 
     private List<String> partOneIds;
     private List<String> regModFileIds;
     private List<String> partTwoIds;
 
-    @Autowired
-    public ReceiverService(
-            @Qualifier("receiver-queue") Queue receiverQueue,
-            AmqpAdmin amqpAdmin,
-            QueueConfig queueConfig,
-            JavaMailSender emailSender,
-            RestTemplate restTemplate,
-            ObjectMapper objectMapper,
-            RabbitTemplate rabbitTemplate) {
+    private final String emailSubject =
+            "WM Exception: ''{0}'' had error ''{1}'' at {2}";
+
+    private final String emailBody =
+            "Integration Name: {0}\n" +
+            "Error Type:       {1}\n" +
+            "Error Subtype:    {2}\n\n" +
+            "{3}";
+
+  @Autowired
+  public ReceiverService(
+      @Qualifier("receiver-queue") Queue receiverQueue,
+      AmqpAdmin amqpAdmin,
+      QueueConfig queueConfig,
+      RestTemplate restTemplate,
+      ObjectMapper objectMapper,
+      RabbitTemplate rabbitTemplate,
+      NotificationService notificationService,
+      MailSendProperties mailSendProperties) {
         this.receiverQueue = receiverQueue;
         this.amqpAdmin = amqpAdmin;
-        this.emailSender = emailSender;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.rabbitTemplate = rabbitTemplate;
         this.queueConfig = queueConfig;
+        this.notificationService = notificationService;
+        this.mailSendProperties = mailSendProperties;
 
         partOneIds = new ArrayList<>();
         regModFileIds = new ArrayList<>();
@@ -128,8 +134,8 @@ public class ReceiverService {
                                     "Request Success", "generateIncomingRequestFile")));
 
         } catch (Exception ex) {
-            ErrorHandler.processError(
-                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
+//            ErrorHandler.processError(
+//                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -171,8 +177,8 @@ public class ReceiverService {
                     objectMapper.writeValueAsString(
                             new RequestSuccessLog("Request Success", "saveDataExchangeFile")));
         } catch (Exception ex) {
-            ErrorHandler.processError(
-                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
+//            ErrorHandler.processError(
+//                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
@@ -196,8 +202,19 @@ public class ReceiverService {
             this.rabbitTemplate.convertAndSend(
                     queueConfig.getTopicExchangeName(), queueConfig.getReceiverRoutingkey(), pub);
         } catch (Exception ex) {
-            ErrorHandler.processError(
-                    emailSender, errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
+            if(StringUtils.isNotBlank(mailSendProperties.getDefaultEmail())) {
+                try {
+                    DateTimeFormatter subjectFt = DateTimeFormatter.ofPattern("MMM-dd-yyyy HH:mm:ss");
+                    String subject = MessageFormat.format(emailSubject, "CRDP", "NA", LocalDateTime.now().format(subjectFt));
+
+                    DateTimeFormatter contentFt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS");
+                    String content = MessageFormat.format(emailBody, "CRDP", "NA", "NA", LocalDateTime.now().format(contentFt));
+
+                    this.notificationService.notify(subject, content, mailSendProperties.getFromEmail(), mailSendProperties.getDefaultEmail());
+                } catch (Exception apiException) {
+                    log.error("Failed to send email notification: " + apiException.getMessage());
+                }
+            }
             log.error(
                     objectMapper.writeValueAsString(
                             new MqErrorLog(

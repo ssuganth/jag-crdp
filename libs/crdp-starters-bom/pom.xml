@@ -6,14 +6,17 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ca.bc.gov.open</groupId>
-    <artifactId>spring-sftp-starter</artifactId>
+    <artifactId>crdp-starters-bom</artifactId>
     <version>0.2.2</version>
 
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <spring-boot.version>2.2.4.RELEASE</spring-boot.version>
+        <org.apache.cxf.version>3.3.7</org.apache.cxf.version>
+        <com.fasterxml.jackson.core.version>2.11.2</com.fasterxml.jackson.core.version>
+        <javax.xml.bind.version>2.3.1</javax.xml.bind.version>
+        <commons.io.version>1.4</commons.io.version>
+        <joda-time.version>2.10.6</joda-time.version>
+        <org.mapstruct.version>1.3.1.Final</org.mapstruct.version>
+        <fi.solita.clamav>1.0.1</fi.solita.clamav>
         <log4j2.version>2.17.1</log4j2.version>
     </properties>
 
@@ -25,79 +28,62 @@
         </repository>
     </distributionManagement>
 
-    <dependencies>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.jcraft</groupId>
-            <artifactId>jsch</artifactId>
-            <version>0.1.55</version>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.junit.vintage</groupId>
-                    <artifactId>junit-vintage-engine</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-    </dependencies>
-
     <dependencyManagement>
         <dependencies>
+
+            <!-- codegen -->
             <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring-boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${org.mapstruct.version}</version>
+            </dependency>
+
+            <!-- jaxws -->
+            <dependency>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-rt-frontend-jaxws</artifactId>
+                <version>${org.apache.cxf.version}</version>
             </dependency>
             <dependency>
-                <groupId>ca.bc.gov.open</groupId>
-                <artifactId>spring-starters-bom</artifactId>
-                <version>0.2.2</version>
-                <type>pom</type>
-                <scope>import</scope>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-rt-transports-http</artifactId>
+                <version>${org.apache.cxf.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-rt-transports-http-jetty</artifactId>
+                <version>${org.apache.cxf.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>${javax.xml.bind.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${commons.io.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>${joda-time.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>fi.solita.clamav</groupId>
+                <artifactId>clamav-client</artifactId>
+                <version>${fi.solita.clamav}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
     <build>
+        <finalName>spring-starters-bom</finalName>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.22.0</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-failsafe-plugin</artifactId>
-                <version>2.22.0</version>
-            </plugin>
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
@@ -132,5 +118,5 @@
             </plugin>
         </plugins>
     </build>
-
+    
 </project>

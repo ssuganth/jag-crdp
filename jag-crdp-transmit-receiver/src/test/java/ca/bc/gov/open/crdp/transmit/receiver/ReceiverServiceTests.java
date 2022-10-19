@@ -6,6 +6,8 @@ import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.transmit.models.*;
 import ca.bc.gov.open.crdp.transmit.receiver.configuration.QueueConfig;
 import ca.bc.gov.open.crdp.transmit.receiver.services.ReceiverService;
+import ca.bc.gov.open.mail.MailSendProperties;
+import ca.bc.gov.open.mail.NotificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +33,8 @@ import org.springframework.web.client.RestTemplate;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ReceiverServiceTests {
     @Mock private ObjectMapper objectMapper;
-    @Mock private JavaMailSender emailSender;
+    @Mock private NotificationService notificationService;
+    @Mock private MailSendProperties mailSendProperties;
     @Mock private RestTemplate restTemplate;
     @Mock private RabbitTemplate rabbitTemplate;
     @Mock private AmqpAdmin amqpAdmin;
@@ -52,10 +55,11 @@ public class ReceiverServiceTests {
                                 receiverQueue,
                                 amqpAdmin,
                                 queueConfig,
-                                emailSender,
                                 restTemplate,
                                 objectMapper,
-                                rabbitTemplate));
+                                rabbitTemplate,
+                                notificationService,
+                                mailSendProperties));
     }
 
     @Test

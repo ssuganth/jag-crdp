@@ -21,6 +21,30 @@
             <version>1.0.0</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>ca.bc.gov.open</groupId>
+            <artifactId>jag-crdp-transmit-sender</artifactId>
+            <version>1.0.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>ca.bc.gov.open</groupId>
+            <artifactId>jag-crdp-process-receiver</artifactId>
+            <version>1.0.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>ca.bc.gov.open</groupId>
+            <artifactId>jag-crdp-common-models</artifactId>
+            <version>1.0.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>ca.bc.gov.open</groupId>
+            <artifactId>jag-crdp-transmit-models</artifactId>
+            <version>1.0.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>

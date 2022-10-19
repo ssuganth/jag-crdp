@@ -225,6 +225,12 @@
             <version>1.0.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>ca.bc.gov.open</groupId>
+            <artifactId>crdp-mail-it</artifactId>
+            <version>0.0.1</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>

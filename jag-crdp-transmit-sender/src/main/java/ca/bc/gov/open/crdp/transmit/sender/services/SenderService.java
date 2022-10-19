@@ -39,20 +39,6 @@ public class SenderService {
     @Value("${crdp.out-file-dir}")
     private String outFileDir = "/";
 
-    @Value("${crdp.notification-addresses}")
-    public void setErrNotificationAddresses(String addresses) {
-        SenderService.errNotificationAddresses = addresses;
-    }
-
-    private static String errNotificationAddresses = "";
-
-    @Value("${crdp.smtp-from}")
-    public void setDefaultSmtpFrom(String from) {
-        SenderService.defaultSmtpFrom = from;
-    }
-
-    private static String defaultSmtpFrom = "";
-
     private final String tempFileDir = "temp-xmls/";
 
     private final RestTemplate restTemplate;
@@ -60,7 +46,8 @@ public class SenderService {
     private final JavaMailSender emailSender;
     private final SftpProperties sftpProperties;
 
-    @Autowired JschSessionProvider jschSessionProvider;
+    @Autowired
+    JschSessionProvider jschSessionProvider;
 
     @Autowired
     public SenderService(
@@ -106,7 +93,7 @@ public class SenderService {
 
             return 0;
         } catch (Exception ex) {
-            ErrorHandler.processError(errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
+            // ErrorHandler.processError(errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(
