@@ -5,7 +5,7 @@ security:
 crdp:
   host: ${ORDS_HOST}
   in-file-dir: ${INCOMING_FILE_DIR}
-  cron-job-incomming-file:  ${CRON_JOB_INCOMMING_FILE}
+  cron-job-incomming-file:  ${CRON_JOB_INCOMING_FILE}
   rabbitmq:
     ords-host: ${ORDS_HOST}
     receiver-queue: ${RECEIVER_QUEUE_NAME}

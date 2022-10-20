@@ -34,9 +34,7 @@ class SenderServiceTests {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        controller =
-                Mockito.spy(
-                        new SenderService(restTemplate, objectMapper, sftpProperties));
+        controller = Mockito.spy(new SenderService(restTemplate, objectMapper, sftpProperties));
     }
 
     @Test

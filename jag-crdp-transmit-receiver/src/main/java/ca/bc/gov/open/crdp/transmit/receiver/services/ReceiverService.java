@@ -9,10 +9,7 @@ import ca.bc.gov.open.crdp.transmit.receiver.configuration.QueueConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.text.MessageFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -61,23 +58,22 @@ public class ReceiverService {
     private List<String> regModFileIds;
     private List<String> partTwoIds;
 
-    private final String emailSubject =
-            "WM Exception: ''{0}'' had error ''{1}'' at {2}";
+    private final String emailSubject = "WM Exception: ''{0}'' had error ''{1}'' at {2}";
 
     private final String emailBody =
-            "Integration Name: {0}\n" +
-            "Error Type:       {1}\n" +
-            "Error Subtype:    {2}\n\n" +
-            "{3}";
+            "Integration Name: {0}\n"
+                    + "Error Type:       {1}\n"
+                    + "Error Subtype:    {2}\n\n"
+                    + "{3}";
 
-  @Autowired
-  public ReceiverService(
-      @Qualifier("receiver-queue") Queue receiverQueue,
-      AmqpAdmin amqpAdmin,
-      QueueConfig queueConfig,
-      RestTemplate restTemplate,
-      ObjectMapper objectMapper,
-      RabbitTemplate rabbitTemplate) {
+    @Autowired
+    public ReceiverService(
+            @Qualifier("receiver-queue") Queue receiverQueue,
+            AmqpAdmin amqpAdmin,
+            QueueConfig queueConfig,
+            RestTemplate restTemplate,
+            ObjectMapper objectMapper,
+            RabbitTemplate rabbitTemplate) {
         this.receiverQueue = receiverQueue;
         this.amqpAdmin = amqpAdmin;
         this.restTemplate = restTemplate;
@@ -91,13 +87,13 @@ public class ReceiverService {
     }
 
     // CRON Job Name:   CRDP Transmit Outgoing File
-    //                  2020/04/14 14:44:14 600s
-    // Pattern      :   "0/10 * * * * *"
-    // Interval     :   Every 10 minutes
+    //                  2020/04/22 16:30:00 86400s
+    // Pattern      :   "* 0/24 * * * *"
+    // Interval     :   Every 24hours
     @PayloadRoot(localPart = "generateIncomingRequestFile")
     @ResponsePayload
-    //    @Scheduled(cron = "${crdp.cron-job-incomming-file}")
-    @Scheduled(cron = "0/5 * * * * *") // Every 2 sec - for testing purpose
+    //    @Scheduled(cron = "${crdp.cron-job-incoming-file}")
+    @Scheduled(cron = "0/5 * * * * *") // Every 5 sec - for testing purpose
     public int GenerateIncomingRequestFile() throws IOException {
         partOneIds.clear();
         regModFileIds.clear();

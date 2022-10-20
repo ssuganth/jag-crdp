@@ -23,7 +23,6 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.ws.server.endpoint.annotation.Endpoint;
@@ -44,14 +43,11 @@ public class SenderService {
     private final ObjectMapper objectMapper;
     private final SftpProperties sftpProperties;
 
-    @Autowired
-    JschSessionProvider jschSessionProvider;
+    @Autowired JschSessionProvider jschSessionProvider;
 
     @Autowired
     public SenderService(
-            RestTemplate restTemplate,
-            ObjectMapper objectMapper,
-            SftpProperties sftpProperties) {
+            RestTemplate restTemplate, ObjectMapper objectMapper, SftpProperties sftpProperties) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.sftpProperties = sftpProperties;
@@ -89,7 +85,8 @@ public class SenderService {
 
             return 0;
         } catch (Exception ex) {
-            // ErrorHandler.processError(errNotificationAddresses, defaultSmtpFrom, ex.getMessage());
+            // ErrorHandler.processError(errNotificationAddresses, defaultSmtpFrom,
+            // ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(

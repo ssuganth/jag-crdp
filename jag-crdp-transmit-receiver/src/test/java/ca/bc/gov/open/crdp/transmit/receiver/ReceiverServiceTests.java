@@ -25,7 +25,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.client.RestTemplate;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -34,11 +33,10 @@ public class ReceiverServiceTests {
     @Mock private RestTemplate restTemplate;
     @Mock private RabbitTemplate rabbitTemplate;
     @Mock private AmqpAdmin amqpAdmin;
+    @Mock private QueueConfig queueConfig;
 
     @Qualifier("receiver-queue")
     private org.springframework.amqp.core.Queue receiverQueue;
-
-    private QueueConfig queueConfig;
 
     @Mock private ReceiverService controller;
 
