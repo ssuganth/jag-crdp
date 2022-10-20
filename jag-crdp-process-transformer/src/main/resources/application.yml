@@ -5,11 +5,12 @@ security:
 crdp:
   host: ${ORDS_HOST}
   in-file-dir: ${INCOMING_FILE_DIR}
-  cron-job-incomming-file:  ${CRON_JOB_INCOMING_FILE}
   rabbitmq:
     ords-host: ${ORDS_HOST}
-    scanner-queue: ${SCANNER_QUEUE_NAME}
-    scanner-routing-key: ${SCANNER_ROUTING_KEY}
+    receiver-queue: ${RECEIVER_QUEUE_NAME}
+    receiver-routing-key: ${RECEIVER_ROUTING_KEY}
+    ping-queue: ${PING_QUEUE_NAME}
+    ping-routing-key: ${PING_ROUTING_KEY}
     exchange-name: ${RABBIT_EXCHANGE_NAME}
 
 management:

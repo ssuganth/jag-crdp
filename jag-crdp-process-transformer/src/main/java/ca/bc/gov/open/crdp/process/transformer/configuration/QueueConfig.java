@@ -1,4 +1,4 @@
-package ca.bc.gov.open.crdp.process.scanner.configuration;
+package ca.bc.gov.open.crdp.process.transformer.configuration;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,9 +12,9 @@ public class QueueConfig {
     @Value("${crdp.rabbitmq.exchange-name}")
     private String topicExchangeName;
 
-    @Value("${crdp.rabbitmq.scanner-queue}")
-    private String scannerQueueName;
+    @Value("${crdp.rabbitmq.receiver-queue}")
+    private String receiverQueueName;
 
-    @Value("${crdp.rabbitmq.scanner-routing-key}")
-    private String scannerRoutingkey;
+    @Value("${crdp.rabbitmq.receiver-routing-key}")
+    private String receiverRoutingkey;
 }

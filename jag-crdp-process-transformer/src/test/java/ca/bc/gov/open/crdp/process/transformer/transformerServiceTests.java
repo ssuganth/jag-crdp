@@ -1,12 +1,11 @@
-package ca.bc.gov.open.crdp.process.scanner;
+package ca.bc.gov.open.crdp.process.transformer;
 
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.*;
 
 import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.process.models.*;
-import ca.bc.gov.open.crdp.process.scanner.configuration.QueueConfig;
-import ca.bc.gov.open.crdp.process.scanner.services.ScannerService;
+import ca.bc.gov.open.crdp.process.transformer.services.TransformerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
@@ -19,9 +18,6 @@ import org.mockito.AdditionalMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.springframework.amqp.core.AmqpAdmin;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -29,20 +25,14 @@ import org.springframework.web.client.RestTemplate;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class ScannerServiceTests {
+public class transformerServiceTests {
 
     private String inFileDir;
 
     @Mock private ObjectMapper objectMapper;
     @Mock private RestTemplate restTemplate;
-    @Mock private RabbitTemplate rabbitTemplate;
-    @Mock private AmqpAdmin amqpAdmin;
-    @Mock private QueueConfig queueConfig;
 
-    @Qualifier("scanner-queue")
-    private org.springframework.amqp.core.Queue scannerQueue;
-
-    private ScannerService controller;
+    private TransformerService controller;
 
     /*
      *  backup folder structure:
@@ -69,14 +59,7 @@ public class ScannerServiceTests {
     public void setUp() throws IOException {
         MockitoAnnotations.openMocks(this);
 
-        controller =
-                new ScannerService(
-                        scannerQueue,
-                        amqpAdmin,
-                        queueConfig,
-                        restTemplate,
-                        objectMapper,
-                        rabbitTemplate);
+        controller = new TransformerService(restTemplate, objectMapper);
 
         String appPath = new File("").getCanonicalPath();
         inFileDir = appPath + "/src/test/resources/test/processingIncoming/";

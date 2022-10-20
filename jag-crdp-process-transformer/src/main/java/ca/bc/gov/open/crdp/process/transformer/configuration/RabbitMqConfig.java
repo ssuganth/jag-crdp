@@ -1,4 +1,4 @@
-package ca.bc.gov.open.crdp.process.scanner.configuration;
+package ca.bc.gov.open.crdp.process.transformer.configuration;
 
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -20,9 +20,9 @@ public class RabbitMqConfig {
         this.queueConfig = queueConfig;
     }
 
-    @Bean(name = "scanner-queue")
-    public Queue scannerQueue() {
-        return new Queue(queueConfig.getScannerQueueName(), false);
+    @Bean(name = "receiver-queue")
+    public Queue receiverQueue() {
+        return new Queue(queueConfig.getReceiverQueueName(), false);
     }
 
     @Bean
@@ -37,10 +37,10 @@ public class RabbitMqConfig {
 
     @Bean
     public Declarables binding(
-            @Qualifier("scanner-queue") Queue scannerQueue, DirectExchange exchange) {
+            @Qualifier("receiver-queue") Queue receiverQueue, DirectExchange exchange) {
         return new Declarables(
-                BindingBuilder.bind(scannerQueue)
+                BindingBuilder.bind(receiverQueue)
                         .to(exchange)
-                        .with(queueConfig.getScannerRoutingkey()));
+                        .with(queueConfig.getReceiverRoutingkey()));
     }
 }

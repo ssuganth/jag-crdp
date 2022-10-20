@@ -30,6 +30,7 @@
         <module>libs/crdp-starters-bom</module>
         <module>libs/crdp-sftp-starter</module>
         <module>jag-crdp-process-scanner</module>
+        <module>jag-crdp-process-transformer</module>
         <module>jag-crdp-process-models</module>
         <module>jag-crdp-transmit-receiver</module>
         <module>jag-crdp-transmit-sender</module>
@@ -93,6 +94,16 @@
             <id>process-scanner</id>
             <modules>
                 <module>jag-crdp-process-scanner</module>
+                <module>jag-crdp-process-models</module>
+                <module>jag-crdp-common-models</module>
+                <module>crdp-code-coverage</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>process-transformer</id>
+            <modules>
+                <module>jag-crdp-process-transformer</module>
+                <module>jag-crdp-process-models</module>
                 <module>jag-crdp-common-models</module>
                 <module>crdp-code-coverage</module>
             </modules>
