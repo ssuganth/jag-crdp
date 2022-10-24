@@ -4,17 +4,21 @@ security:
     username: ${BASIC_AUTH_USER}
 crdp:
   host: ${ORDS_HOST}
-  in-file-dir: ${INCOMING_FILE_DIR}
+  in-progress-dir: ${IN_PROGRESS_DIR}
+  completed-dir: ${COMPLETED_DIR}
+  errors-dir: ${ERRORS_DIR}
+  scanner-queue: ${SCANNER_QUEUE_NAME}
+
+spring:
   rabbitmq:
-    ords-host: ${ORDS_HOST}
-    receiver-queue: ${RECEIVER_QUEUE_NAME}
-    receiver-routing-key: ${RECEIVER_ROUTING_KEY}
-    ping-queue: ${PING_QUEUE_NAME}
-    ping-routing-key: ${PING_ROUTING_KEY}
-    exchange-name: ${RABBIT_EXCHANGE_NAME}
+    host: ${RABBIT_MQ_HOST}
+    port: 5672
 
 management:
   endpoints:
     web:
       exposure:
         include: metrics,prometheus,health
+
+server:
+  port: 8084

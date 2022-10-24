@@ -3,11 +3,10 @@ security:
     password: ${BASIC_AUTH_PASS}
     username: ${BASIC_AUTH_USER}
 crdp:
-  host: ${ORDS_HOST}
   in-file-dir: ${INCOMING_FILE_DIR}
+  in-progress-dir: ${IN_PROGRESS_DIR}
   cron-job-incomming-file:  ${CRON_JOB_INCOMING_FILE}
   rabbitmq:
-    ords-host: ${ORDS_HOST}
     scanner-queue: ${SCANNER_QUEUE_NAME}
     scanner-routing-key: ${SCANNER_ROUTING_KEY}
     exchange-name: ${RABBIT_EXCHANGE_NAME}
@@ -17,3 +16,6 @@ management:
     web:
       exposure:
         include: metrics,prometheus,health
+
+server:
+  port: 8083

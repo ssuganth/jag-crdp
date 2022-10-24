@@ -85,8 +85,6 @@ public class SenderService {
 
             return 0;
         } catch (Exception ex) {
-            // ErrorHandler.processError(errNotificationAddresses, defaultSmtpFrom,
-            // ex.getMessage());
             log.error(
                     objectMapper.writeValueAsString(
                             new OrdsErrorLog(

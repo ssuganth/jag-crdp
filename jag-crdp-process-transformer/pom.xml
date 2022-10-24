@@ -207,23 +207,12 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-            <version>2.6.8</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.amqp</groupId>
             <artifactId>spring-rabbit-test</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>ca.bc.gov.open</groupId>
-            <artifactId>crdp-mail-it</artifactId>
-            <version>0.0.1</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 

@@ -1,10 +1,12 @@
 package ca.bc.gov.open.crdp.process.scanner.services;
 
-import ca.bc.gov.open.crdp.process.models.*;
+import ca.bc.gov.open.crdp.models.MqErrorLog;
 import ca.bc.gov.open.crdp.process.scanner.configuration.QueueConfig;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -12,7 +14,6 @@ import java.util.Map.Entry;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -27,11 +28,11 @@ import org.springframework.ws.server.endpoint.annotation.Endpoint;
 @Slf4j
 public class ScannerService {
 
-    @Value("${crdp.host}")
-    private String host = "https://127.0.0.1/";
-
     @Value("${crdp.in-file-dir}")
     private String inFileDir = "/";
+
+    @Value("${crdp.in-progress-dir}")
+    private String inProgressDir = "/";
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -45,15 +46,9 @@ public class ScannerService {
     private static String
             processFolderName; // current "Processed_yyyy_nn" folder name (not full path).
 
-    private static TreeMap<String, String> processedFilesToMove =
+    private static TreeMap<String, String> inProgressFilesToMove = new TreeMap<String, String>();
+    private static TreeMap<String, String> inProgressFoldersToMove =
             new TreeMap<String, String>(); // completed files.
-    private static TreeMap<String, String> erredFilesToMove =
-            new TreeMap<String, String>(); // erred files.
-
-    private static TreeMap<String, String> processedFoldersToMove =
-            new TreeMap<String, String>(); // completed folders.
-    private static TreeMap<String, String> erredFoldersToMove =
-            new TreeMap<String, String>(); // erred folders.
 
     DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
 
@@ -79,19 +74,24 @@ public class ScannerService {
     // Interval     :   Every 10 minutes
     /** The primary method for the Java service to scan CRDP directory */
     //    @Scheduled(cron = "${crdp.cron-job-outgoing-file}")
-    @Scheduled(cron = "0/2 * * * * *") // Every 2 sec - for testing purpose
+    @Scheduled(cron = "0/5 * * * * *") // Every 5 sec - for testing purpose
     public void CRDPScanner() {
         // re-initialize arrays. Failing to do this can result in unpredictable results.
         headFolderList = new ArrayList<String>();
-        processedFilesToMove = new TreeMap<String, String>(); // completed files.
-        erredFilesToMove = new TreeMap<String, String>(); // erred files.
-        processedFoldersToMove = new TreeMap<String, String>(); // completed folders.
-        erredFoldersToMove = new TreeMap<String, String>(); // erred folders.
+        inProgressFilesToMove = new TreeMap<String, String>();
+        inProgressFoldersToMove = new TreeMap<String, String>(); // completed files.
 
         // File object
         File mainDir = new File(inFileDir);
 
         if (mainDir.exists() && mainDir.isDirectory()) {
+
+            // create inProgress folder
+            File inProDir = new File(inProgressDir);
+            if (!inProDir.exists()) {
+                inProDir.mkdir();
+            }
+
             // array for files and sub-directories of directory pointed by mainDir
             File arr[] = mainDir.listFiles();
 
@@ -102,20 +102,158 @@ public class ScannerService {
                 ex.printStackTrace();
             }
 
-            try {
-                // move files into in-progress folder
-                for (Entry<String, String> m : processedFilesToMove.entrySet()) {
-                    move(new File(m.getKey()), m.getValue());
-                }
-
-                // move folders into in-progress folder
-                for (Entry<String, String> m : processedFoldersToMove.entrySet()) {
-                    move(new File(m.getKey()), m.getValue());
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (inProgressFilesToMove.isEmpty() && inProgressFoldersToMove.isEmpty()) {
+                log.info("No file/fold found, end current scan session");
+                return;
             }
+
+            try {
+                // enqueue a timestamp of current scan
+                enQueue("scanning time:" + new Timestamp(System.currentTimeMillis()).toString());
+
+                // move files into in-progress folder
+                for (Entry<String, String> m : inProgressFilesToMove.entrySet()) {
+                    File f = new File(m.getKey());
+                    move(f, m.getValue());
+                    enQueue(m.getValue() + f.getName());
+                }
+
+                for (Entry<String, String> m : inProgressFoldersToMove.entrySet()) {
+                    move(new File(m.getKey()), m.getValue());
+                    enQueue(m.getValue());
+                }
+                cleanUp(inFileDir, headFolderList);
+                log.info("Scan Complete");
+            } catch (Exception e) {
+                log.error(e.getMessage());
+            }
+        }
+    }
+
+    private static void cleanUp(String headFolderPath, List<String> headFolderList) {
+        // delete processed folders (delivered from Ottawa).
+        for (int i = 0; i < headFolderList.size(); i++) {
+            if (headFolderList.get(i).equals("inProgress")
+                    || headFolderList.get(i).equals("Errors")
+                    || headFolderList.get(i).equals("Completed")) {
+                continue;
+            }
+            removeFolderSvc(headFolderPath + "/" + headFolderList.get(i));
+        }
+        // Todo:
+        // clean out 'Completed' and 'Errors' folder.
+        // removeFolderSvc(headFolderPath + "/processed");
+        // makeFolderSvc(headFolderPath + "/processed");
+    }
+
+    /** The primary method for the Java service to create a folder */
+    public static final void makeFolderSvc(String folderPath) {
+        File target = new File(folderPath);
+        // The folderPath must IN a folder owned by wmadmin OR be in a folder with o-rwx permissions
+        // set.
+        try {
+            FileUtils.forceMkdir(target);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** The primary method for the Java service to delete a folder */
+    public static final void removeFolderSvc(String folderPath) {
+        // The folderPath must be owned by wmadmin OR have o-rwx permissions set.
+        File target = new File(folderPath);
+        try {
+            if (target.exists()) {
+                FileUtils.deleteDirectory(target);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void recursiveScan(File[] arr, int index, int level) throws IOException {
+        // terminate condition
+        if (index == arr.length) return;
+        try {
+            // for root folder files (Audit and Status).
+            if (arr[index].isFile()) {
+                inProgressFilesToMove.put(arr[index].getCanonicalPath(), inProgressDir);
+                log.info("Found file: " + arr[index].getName());
+            }
+
+            // for sub-directories
+            if (arr[index].isDirectory()) {
+                // Retain the name of the current process folder short name
+                // and add to list for deletion at the end of processing.
+                if (isProcessedFolder(arr[index].getName())) {
+                    processFolderName = arr[index].getName();
+                    headFolderList.add(processFolderName);
+                }
+                if (isProcessedFolder(arr[index].getName())
+                        || isProcessedSubFolder(arr[index].getName())) {
+                    if ("CCs".equals(arr[index].getName())
+                            || "Letters".equals(arr[index].getName())
+                            || "R-Lists".equals(arr[index].getName())
+                            || "JUS178s".equals(arr[index].getName())) {
+                        inProgressFoldersToMove.put(
+                                arr[index].getCanonicalPath(),
+                                inProgressDir + processFolderName + "/" + arr[index].getName());
+                    } else {
+                        // recursion for sub-directories
+                        recursiveScan(arr[index].listFiles(), 0, level + 1);
+                    }
+                }
+            }
+
+        } catch (Exception ex) {
+            log.error(
+                    "An error was captured from the CRDP Scanner. Message: "
+                            + ex.getLocalizedMessage());
+        }
+
+        // recursion for main directory
+        recursiveScan(arr, ++index, level);
+    }
+
+    private static boolean isProcessedFolder(String name) {
+        String processedRegex =
+                "\\bProcessed_\\w+[-][0-9][0-9][-][0-9][0-9]"; // \bProcessed_\w+[-][0-9][0-9][-][0-9][0-9]
+        return Pattern.matches(processedRegex, name);
+    }
+
+    private static boolean isProcessedSubFolder(String name) {
+        if ("CCs".equals(name)
+                || "JUS178s".equals(name)
+                || "Letters".equals(name)
+                || "R-Lists".equals(name)) return true;
+        else return false;
+    }
+
+    private static void move(File file, String targetFolder) throws Exception {
+        try {
+            if (file.isFile()) {
+                // move single file
+                moveFileSvc(file.getCanonicalPath(), targetFolder);
+            } else {
+                // move single folder
+                moveFolderSvc(file.getCanonicalPath(), targetFolder);
+            }
+        } catch (Exception e) {
+            throw new Exception("An error was caught moving a file or folder to " + targetFolder);
+        }
+    }
+
+    private void enQueue(String filePath) throws JsonProcessingException {
+        try {
+            this.rabbitTemplate.convertAndSend(
+                    queueConfig.getTopicExchangeName(),
+                    queueConfig.getScannerRoutingkey(),
+                    filePath);
+        } catch (Exception ex) {
+            log.error(
+                    objectMapper.writeValueAsString(
+                            new MqErrorLog(
+                                    "Enqueue failed", "RecursiveScan", ex.getMessage(), filePath)));
         }
     }
 
@@ -143,133 +281,6 @@ public class ScannerService {
             FileUtils.deleteDirectory(source);
         } catch (IOException e) {
             e.printStackTrace();
-        }
-    }
-
-    /** The primary method for the Java service to create a folder */
-    public static final void makeFolderSvc(String folderPath) {
-        File target = new File(folderPath);
-        // The folderPath must IN a folder owned by wmadmin OR be in a folder with o-rwx permissions
-        // set.
-        try {
-            FileUtils.forceMkdir(target);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static final List<String> extractPDFFileNames(String folderName) throws IOException {
-        /** Purpose of this service is to extract a list of file names from a given folder */
-        List<String> pdfs = new ArrayList<>();
-
-        try {
-            File file = new File(folderName);
-            File[] files = file.listFiles();
-            for (File f : files) {
-                if (FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("pdf")) {
-                    pdfs.add(f.getCanonicalPath());
-                }
-            }
-            return pdfs;
-        } catch (Exception e) {
-            throw new IOException(e.getMessage());
-        }
-    }
-
-    public static final String extractXMLFileName(String[] fileList, String regex)
-            throws IOException {
-        /**
-         * Purpose of this service is to extract a file from a list of file names given a specific
-         * regex.
-         */
-        String result = null;
-        if (fileList == null || fileList.length == 0 || regex == null) {
-            throw new IOException(
-                    "Unsatisfied parameter requirement(s) at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName");
-        }
-        try {
-            for (int i = 0; i < fileList.length; i++) {
-                if (Pattern.matches(regex, fileList[i])) {
-                    if (result != null)
-                        throw new IOException(
-                                "Multiple files found satisfying regex at CRDP.Source.ProcessIncomingFile.Java:extractXMLFileName. Should only be one.");
-                    result = fileList[i];
-                }
-            }
-            return result;
-        } catch (IOException ex) {
-            throw new IOException(ex.getMessage());
-        }
-    }
-
-    private void recursiveScan(File[] arr, int index, int level) throws IOException {
-        // terminate condition
-        if (index == arr.length) return;
-        try {
-            // for root folder files (Audit and Status).
-            if (arr[index].isFile()) {
-                // processFile(arr[index]);
-                log.info("Found file: " + arr[index].getName());
-            }
-
-            // for sub-directories
-            //            if (arr[index].isDirectory()) {
-            //
-            //                // Retain the name of the current process folder short name
-            //                // and add to list for deletion at the end of processing.
-            //                if (isProcessedFolder(arr[index].getName())) {
-            //                    processFolderName = arr[index].getName();
-            //                    headFolderList.add(processFolderName);
-            //                }
-            //
-            //                if (isProcessedFolder(arr[index].getName())
-            //                        || isProcessedSubFolder(arr[index].getName())) {
-            //                    if ("CCs".equals(arr[index].getName())) {
-            //                        processFolder(
-            //                                arr[index].getCanonicalPath() + "/", "CCs",
-            // "ProcessDocuments");
-            //                    }
-            //                    if ("JUS178s".equals(arr[index].getName())) {
-            //                        processFolder(
-            //                                arr[index].getCanonicalPath() + "/", "JUS178s",
-            // "ProcessReports");
-            //                    }
-            //                    if ("Letters".equals(arr[index].getName())) {
-            //                        processFolder(
-            //                                arr[index].getCanonicalPath() + "/", "Letters",
-            // "ProcessDocuments");
-            //                    }
-            //                    if ("R-Lists".equals(arr[index].getName())) {
-            //                        processFolder(
-            //                                arr[index].getCanonicalPath() + "/", "R-Lists",
-            // "ProcessReports");
-            //                    }
-            //                    // recursion for sub-directories
-            //                    recursiveScan(arr[index].listFiles(), 0, level + 1);
-            //                }
-            //            }
-
-        } catch (Exception ex) {
-            log.error(
-                    "An error was captured from the CRDP Scanner. Message: "
-                            + ex.getLocalizedMessage());
-        }
-
-        // recursion for main directory
-        recursiveScan(arr, ++index, level);
-    }
-
-    private static void move(File file, String targetFolder) throws Exception {
-        try {
-            if (file.isFile()) {
-                // move single file
-                moveFileSvc(file.getCanonicalPath(), targetFolder);
-            } else {
-                // move single folder
-                moveFolderSvc(file.getCanonicalPath(), targetFolder);
-            }
-        } catch (Exception e) {
-            throw new Exception("An error was caught moving a file or folder to " + targetFolder);
         }
     }
 }
