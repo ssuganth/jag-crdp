@@ -73,7 +73,7 @@ public class TransformerService {
     }
 
     public void recordScanningTime(String timestamp) {
-        this.timestamp = timestamp + "/";
+        this.timestamp = timestamp;
     }
 
     public void processFile(String fileName) {
@@ -87,6 +87,26 @@ public class TransformerService {
         File mainDir = new File(inProgressDir);
 
         if (mainDir.exists() && mainDir.isDirectory()) {
+            // create Completed folder
+            File compDir = new File(completedDir);
+            if (!compDir.exists()) {
+                compDir.mkdir();
+            }
+            File compTimestampDir = new File(completedDir + timestamp);
+            if (!compTimestampDir.exists()) {
+                compTimestampDir.mkdir();
+            }
+
+            // create Errors folder
+            File errDir = new File(errorsDir);
+            if (!errDir.exists()) {
+                errDir.mkdir();
+            }
+            File errTimestampDir = new File(errorsDir + timestamp);
+            if (!errTimestampDir.exists()) {
+                errTimestampDir.mkdir();
+            }
+
             File file = new File(fileName);
             if (file.isFile()) {
                 // process files
@@ -114,7 +134,7 @@ public class TransformerService {
                 for (Map.Entry<String, String> m : erredFoldersToMove.entrySet()) {
                     move(new File(m.getKey()), m.getValue());
                 }
-                //                cleanUp(inProgressDir);
+                cleanUp(inProgressDir);
             } catch (Exception e) {
                 log.error(e.getMessage());
             }
@@ -124,9 +144,13 @@ public class TransformerService {
     }
 
     private static void cleanUp(String inProgressDir) {
-        // todo: delete inProgress folder
-        // delete inProgress folder.
-        removeFolderSvc(inProgressDir);
+        File dir = new File(inProgressDir);
+        File[] fileList = dir.listFiles();
+        for (var f : fileList) {
+            if (f.listFiles() != null && f.listFiles().length == 0) {
+                removeFolderSvc(f.getAbsolutePath());
+            }
+        }
     }
 
     private void processFile(File file) {
@@ -134,7 +158,7 @@ public class TransformerService {
         try {
             fileName = file.getCanonicalPath();
         } catch (IOException e1) {
-            e1.printStackTrace();
+            log.error(e1.getMessage());
         }
 
         String auditRegex = "^[A-Za-z]{4}O_Audit.\\d{6}.XML"; // ^[A-Z]{4}O_Audit.\d{6}.XML
@@ -153,13 +177,11 @@ public class TransformerService {
 
             // Move file to 'completed' folder on success (status or audit only)
             if (move) {
-                completedFilesToMove.put(file.getAbsolutePath(), completedDir + timestamp);
+                completedFilesToMove.put(file.getAbsolutePath(), completedDir + timestamp + "\\");
             }
 
         } catch (Exception e) {
-            erredFilesToMove.put(file.getAbsolutePath(), errorsDir + timestamp);
-            // Todo:
-            log.error(e.getMessage());
+            erredFilesToMove.put(file.getAbsolutePath(), errorsDir + timestamp + "\\");
         }
     }
 
@@ -317,16 +339,13 @@ public class TransformerService {
             // Add the processed folder and its target location to the processedFolders map
             // dealt with at the end of processing.
             completedFoldersToMove.put(
-                    folderPath.getAbsolutePath(), completedDir + timestamp + folderPath.getName());
+                    folderPath.getAbsolutePath(), completedDir + timestamp + "\\" + folderPath.getName());
 
         } catch (Exception e) {
             // Add the erred folder path and its target location to the erred folders map
             // dealt with at the end of processing.
             erredFoldersToMove.put(
-                    folderPath.getAbsolutePath(), errorsDir + timestamp + folderPath.getName());
-
-            log.error(
-                    "An error was captured from the CRDP transformer. Message: " + e.getMessage());
+                    folderPath.getAbsolutePath(), errorsDir + timestamp + "\\" + folderPath.getName());
         }
     }
 
@@ -526,9 +545,10 @@ public class TransformerService {
         for (String pdf : pdfs) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "rpt");
 
-            byte[] file = readFile(new File(pdf));
+            File reqPDF = new File(pdf);
+            byte[] file = readFile(reqPDF);
 
-            ProcessReportRequest req = new ProcessReportRequest(pdf, processedDate, file);
+            ProcessReportRequest req = new ProcessReportRequest(reqPDF.getName(), processedDate, file);
             HttpEntity<ProcessReportRequest> payload = new HttpEntity<>(req, new HttpHeaders());
             try {
                 HttpEntity<ProcessReportResponse> response =
@@ -573,7 +593,7 @@ public class TransformerService {
             File[] files = file.listFiles();
             for (File f : files) {
                 if (FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("pdf")) {
-                    pdfs.add(f.getName());
+                    pdfs.add(f.getCanonicalPath());
                 }
             }
             return pdfs;

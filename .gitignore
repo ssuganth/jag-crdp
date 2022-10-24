@@ -43,3 +43,4 @@ cc-test-reporter
 /.ssh/*
 /*.xml
 /temp-xmls/*
+/test/home/*

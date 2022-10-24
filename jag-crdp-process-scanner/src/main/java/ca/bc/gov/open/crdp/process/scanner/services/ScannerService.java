@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
@@ -20,6 +22,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.ws.server.endpoint.annotation.Endpoint;
@@ -50,7 +53,7 @@ public class ScannerService {
     private static TreeMap<String, String> inProgressFoldersToMove =
             new TreeMap<String, String>(); // completed files.
 
-    DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
+    DateTimeFormatter customFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss");
 
     @Autowired
     public ScannerService(
@@ -85,7 +88,6 @@ public class ScannerService {
         File mainDir = new File(inFileDir);
 
         if (mainDir.exists() && mainDir.isDirectory()) {
-
             // create inProgress folder
             File inProDir = new File(inProgressDir);
             if (!inProDir.exists()) {
@@ -109,7 +111,7 @@ public class ScannerService {
 
             try {
                 // enqueue a timestamp of current scan
-                enQueue("scanning time:" + new Timestamp(System.currentTimeMillis()).toString());
+                enQueue("scanning time:" + customFormatter.format(LocalDateTime.now()));
 
                 // move files into in-progress folder
                 for (Entry<String, String> m : inProgressFilesToMove.entrySet()) {

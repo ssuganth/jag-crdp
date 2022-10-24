@@ -24,7 +24,7 @@ public class ConsumerService {
     }
 
     @RabbitListener(queues = "${crdp.scanner-queue}")
-    public void receiveScannerPubMessage(@Payload Message<String> message) throws IOException {
+    public void receiveScannerPubMessage(@Payload Message<String> message) {
         if (message.getPayload().contains("scanning time:")) {
             transformerService.recordScanningTime(
                     message.getPayload()
