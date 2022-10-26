@@ -1,7 +1,6 @@
 package ca.bc.gov.open.crdp.process.transformer.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -6,9 +6,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -22,7 +19,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.ws.server.endpoint.annotation.Endpoint;
@@ -71,18 +67,15 @@ public class ScannerService {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    // CRON Job Name:   CRDP Incoming File Processor
-    //                  2020/04/14 14:44:14 600s
-    // Pattern      :   "0/10 * * * * *"
-    // Interval     :   Every 10 minutes
     /** The primary method for the Java service to scan CRDP directory */
-    //    @Scheduled(cron = "${crdp.cron-job-outgoing-file}")
-    @Scheduled(cron = "0/5 * * * * *") // Every 5 sec - for testing purpose
+    @Scheduled(cron = "${crdp.cron-job-incoming-file}")
     public void CRDPScanner() {
-        // re-initialize arrays. Failing to do this can result in unpredictable results.
+        // re-initialize arrays
         headFolderList = new ArrayList<String>();
         inProgressFilesToMove = new TreeMap<String, String>();
-        inProgressFoldersToMove = new TreeMap<String, String>(); // completed files.
+        inProgressFoldersToMove = new TreeMap<String, String>();
+
+        LocalDateTime scanDateTime = LocalDateTime.now();
 
         // File object
         File mainDir = new File(inFileDir);
@@ -105,13 +98,13 @@ public class ScannerService {
             }
 
             if (inProgressFilesToMove.isEmpty() && inProgressFoldersToMove.isEmpty()) {
-                log.info("No file/fold found, end current scan session");
+                log.info("No file/fold found, end current scan session: " + scanDateTime);
                 return;
             }
 
             try {
                 // enqueue a timestamp of current scan
-                enQueue("scanning time:" + customFormatter.format(LocalDateTime.now()));
+                enQueue("scanning time:" + customFormatter.format(scanDateTime));
 
                 // move files into in-progress folder
                 for (Entry<String, String> m : inProgressFilesToMove.entrySet()) {
@@ -180,7 +173,6 @@ public class ScannerService {
             // for root folder files (Audit and Status).
             if (arr[index].isFile()) {
                 inProgressFilesToMove.put(arr[index].getCanonicalPath(), inProgressDir);
-                log.info("Found file: " + arr[index].getName());
             }
 
             // for sub-directories

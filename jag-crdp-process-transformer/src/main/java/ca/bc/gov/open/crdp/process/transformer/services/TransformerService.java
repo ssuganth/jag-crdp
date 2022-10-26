@@ -16,7 +16,12 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.xml.XMLConstants;
 import javax.xml.bind.JAXB;
+import javax.xml.transform.Source;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -63,6 +68,15 @@ public class TransformerService {
             new TreeMap<String, String>(); // completed folders.
     private static TreeMap<String, String> erredFoldersToMove =
             new TreeMap<String, String>(); // erred folders.
+
+    private static String auditSchemaPath =
+            "jag-crdp-process-transformer/src/main/resources/xsdSchemas/outgoingAudit.xsd";
+    private static String ccSchemaPath =
+            "jag-crdp-process-transformer/src/main/resources/xsdSchemas/outgoingCCs.xsd";
+    private static String lettersSchemaPath =
+            "jag-crdp-process-transformer/src/main/resources/xsdSchemas/outgoingLetters.xsd";
+    private static String statusSchemaPath =
+            "jag-crdp-process-transformer/src/main/resources/xsdSchemas/outgoingStatus.xsd";
 
     DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
 
@@ -187,9 +201,14 @@ public class TransformerService {
 
     public void processAuditSvc(String fileName) throws IOException {
         String shortFileName = FilenameUtils.getName(fileName); // Extract file name from full path
+        File xmlFile = new File(fileName);
+        if (!validateXml(auditSchemaPath, new File(fileName))) {
+            throw new IOException("XML file schema validation failed. fileName : " + xmlFile);
+        }
+
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-audit");
 
-        byte[] file = readFile(new File(fileName));
+        byte[] file = readFile(xmlFile);
 
         ProcessAuditRequest req = new ProcessAuditRequest(shortFileName, file);
         // Send ORDS request
@@ -230,10 +249,13 @@ public class TransformerService {
 
     public void processStatusSvc(String fileName) throws IOException {
         String shortFileName = FilenameUtils.getName(fileName); // Extract file name from full path
-
+        File xmlFile = new File(fileName);
+        if (!validateXml(statusSchemaPath, xmlFile)) {
+            throw new IOException("XML file schema validation failed. fileName : " + xmlFile);
+        }
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(host + "process-status");
 
-        byte[] file = readFile(new File(fileName));
+        byte[] file = readFile(xmlFile);
 
         ProcessStatusRequest req = new ProcessStatusRequest(shortFileName, file);
         HttpEntity<ProcessStatusRequest> payload = new HttpEntity<>(req, new HttpHeaders());
@@ -339,13 +361,15 @@ public class TransformerService {
             // Add the processed folder and its target location to the processedFolders map
             // dealt with at the end of processing.
             completedFoldersToMove.put(
-                    folderPath.getAbsolutePath(), completedDir + timestamp + "\\" + folderPath.getName());
+                    folderPath.getAbsolutePath(),
+                    completedDir + timestamp + "\\" + folderPath.getName());
 
         } catch (Exception e) {
             // Add the erred folder path and its target location to the erred folders map
             // dealt with at the end of processing.
             erredFoldersToMove.put(
-                    folderPath.getAbsolutePath(), errorsDir + timestamp + "\\" + folderPath.getName());
+                    folderPath.getAbsolutePath(),
+                    errorsDir + timestamp + "\\" + folderPath.getName());
         }
     }
 
@@ -360,14 +384,27 @@ public class TransformerService {
         // Populates the array with names of files and directories
         fileList = f.list();
         String fileName = "";
+        boolean isValid = false;
+        File xmlFile = null;
         if (folderShortName.equals("CCs")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_CCs.XML");
+            xmlFile = new File(folderName + "\\" + fileName);
+            isValid = validateXml(ccSchemaPath, xmlFile);
         } else if (folderShortName.equals("Letters")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_Letters.XML");
+            xmlFile = new File(folderName + "\\" + fileName);
+            isValid = validateXml(lettersSchemaPath, xmlFile);
         } else {
             log.error("Unexpected folder short name: " + folderShortName);
+            return;
         }
-        byte[] ccDocument = readFile(new File(folderName + "\\" + fileName));
+
+        if (!isValid) {
+            throw new IOException(
+                    "XML file schema validation failed. fileName : " + folderName + fileName);
+        }
+
+        byte[] document = readFile(xmlFile);
 
         UriComponentsBuilder builder =
                 UriComponentsBuilder.fromHttpUrl(host + "doc/status")
@@ -446,7 +483,7 @@ public class TransformerService {
                             e.getMessage(),
                             dateFormat.format(Calendar.getInstance().getTime()),
                             fileName,
-                            ccDocument);
+                            document);
 
                     throw new ORDSException();
                 }
@@ -457,7 +494,7 @@ public class TransformerService {
             String xml = sw.toString();
 
             ProcessXMLRequest req =
-                    new ProcessXMLRequest(ccDocument, xml.getBytes(StandardCharsets.UTF_8));
+                    new ProcessXMLRequest(document, xml.getBytes(StandardCharsets.UTF_8));
             if (folderShortName.equals("CCs")) {
                 UriComponentsBuilder builder3 =
                         UriComponentsBuilder.fromHttpUrl(host + "doc/processCCs");
@@ -491,7 +528,7 @@ public class TransformerService {
                             e.getMessage(),
                             dateFormat.format(Calendar.getInstance().getTime()),
                             fileName,
-                            ccDocument);
+                            document);
 
                     throw new ORDSException();
                 }
@@ -530,12 +567,15 @@ public class TransformerService {
                         "Unexpected folder short name: " + folderShortName,
                         dateFormat.format(Calendar.getInstance().getTime()),
                         fileName,
-                        ccDocument);
+                        document);
                 throw new ORDSException();
             }
 
         } else {
             // do nothing
+            log.info(
+                    "Document already processed. Response from GetDocumentProcessStatus: "
+                            + resp.getBody());
             return;
         }
     }
@@ -548,7 +588,8 @@ public class TransformerService {
             File reqPDF = new File(pdf);
             byte[] file = readFile(reqPDF);
 
-            ProcessReportRequest req = new ProcessReportRequest(reqPDF.getName(), processedDate, file);
+            ProcessReportRequest req =
+                    new ProcessReportRequest(reqPDF.getName(), processedDate, file);
             HttpEntity<ProcessReportRequest> payload = new HttpEntity<>(req, new HttpHeaders());
             try {
                 HttpEntity<ProcessReportResponse> response =
@@ -581,6 +622,19 @@ public class TransformerService {
 
                 throw new ORDSException();
             }
+        }
+    }
+
+    public boolean validateXml(String xsdPath, File xmlFile) {
+        SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        Source schemaFile = new StreamSource(xsdPath);
+        try {
+            Schema schema = factory.newSchema(schemaFile);
+            schema.newValidator().validate(new StreamSource(xmlFile));
+            return true;
+        } catch (Exception e) {
+            log.error("validateXml error: " + e.getMessage());
+            return false;
         }
     }
 

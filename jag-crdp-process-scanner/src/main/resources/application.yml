@@ -5,7 +5,7 @@ security:
 crdp:
   in-file-dir: ${INCOMING_FILE_DIR}
   in-progress-dir: ${IN_PROGRESS_DIR}
-  cron-job-incomming-file:  ${CRON_JOB_INCOMING_FILE}
+  cron-job-incoming-file: ${CRON_JOB_INCOMING_FILE}
   rabbitmq:
     scanner-queue: ${SCANNER_QUEUE_NAME}
     scanner-routing-key: ${SCANNER_ROUTING_KEY}
