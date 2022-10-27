@@ -40,3 +40,7 @@ cc-test-reporter
 
 /src/test/resources/test/
 
+/.ssh/*
+/*.xml
+/temp-xmls/*
+/test/home/*

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="CRDPFORMS">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="CRDPAUDIT01" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Record_Type" type="xs:string"/>
+                            <xs:element name="File_Name" type="xs:string"/>
+                            <xs:element name="File_Date" type="xs:string"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="CRDPAUDITRESULT" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Request_Type" type="xs:string"/>
+                            <xs:element name="Requested_Action" type="xs:string"/>
+                            <xs:element name="Court_Number" type="xs:string"/>
+                            <xs:element name="Divorce_Registry_Number" type="xs:string"/>
+                            <xs:element name="Source_Case_Number" type="xs:string" minOccurs="0"/>
+                            <xs:element name="Result_Code" type="xs:string"/>
+                            <xs:element name="Errors" minOccurs="0">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="Error" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="CRDPAUDIT99" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Record_Type" type="xs:string" />
+                            <xs:element name="Success_RecordCount" type="xs:string" />
+                            <xs:element name="Failed_RecordCount" type="xs:string" />
+                            <xs:element name="Warning_RecordCount" type="xs:string" />
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

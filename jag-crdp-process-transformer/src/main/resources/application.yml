@@ -1,0 +1,24 @@
+security:
+  basic-auth:
+    password: ${BASIC_AUTH_PASS}
+    username: ${BASIC_AUTH_USER}
+crdp:
+  host: ${ORDS_HOST}
+  in-progress-dir: ${IN_PROGRESS_DIR}
+  completed-dir: ${COMPLETED_DIR}
+  errors-dir: ${ERRORS_DIR}
+  scanner-queue: ${SCANNER_QUEUE_NAME}
+
+spring:
+  rabbitmq:
+    host: ${RABBIT_MQ_HOST}
+    port: 5672
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics,prometheus,health
+
+server:
+  port: 8084

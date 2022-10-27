@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="CLEARANCECERTIFICATES">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="CRDPCC01" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Record_Type" type="xs:string" minOccurs="0"/>
+                            <xs:element name="File_Name" type="xs:string" minOccurs="0"/>
+                            <xs:element name="File_Date" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="CRDPCCDETAIL" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Court_Number" type="xs:string" minOccurs="0"/>
+                            <xs:element name="Divorce_Registry_Number" type="xs:string" minOccurs="0"/>
+                            <xs:element name="Source_Case_Number" type="xs:string" minOccurs="0"/>
+                            <xs:element name="Issue_Date" type="xs:string" minOccurs="0"/>
+                            <xs:element name="Expiration_Date" type="xs:string" minOccurs="0"/>
+                            <xs:element name="PDF_Filename" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="CRDPCC99" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Record_Type" type="xs:string" minOccurs="0"/>
+                            <xs:element name="Record_Count" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>
