@@ -1,4 +1,4 @@
-package ca.bc.gov.open.crdp.transmit.receiver;
+package ca.bc.gov.open.crdp.transmit.sender;
 
 import static org.mockito.Mockito.*;
 

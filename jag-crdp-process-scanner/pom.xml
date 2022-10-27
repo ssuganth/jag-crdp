@@ -271,10 +271,11 @@
                         <exclude>**/configuration/WSDLFilter*</exclude>
                         <exclude>**/configuration/MyBasicAuthenticationEntryPoint*</exclude>
                         <exclude>**/configuration/SecurityConfig*</exclude>
-                        <exclude>**/configuration/MailConfig*</exclude>
                         <exclude>**/configuration/SoapConfig*</exclude>
+                        <exclude>**/configuration/RabbitMqConfig*</exclude>
+                        <exclude>**/configuration/QueueConfig*</exclude>
                         <exclude>**/configuration/HttpServletRequestWrapper.class</exclude>
-                        <exclude>**/CrdpApplication.class</exclude>
+                        <exclude>**/ProcessScannerApplication.class</exclude>
                         <exclude>**/ObjectFactory.class</exclude>
                         <exclude>**/Adapter1.class</exclude>
                     </excludes>

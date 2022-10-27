@@ -1,12 +1,10 @@
 package ca.bc.gov.open.crdp.process.scanner;
 
-import ca.bc.gov.open.crdp.process.models.*;
+import static org.mockito.Mockito.*;
+
 import ca.bc.gov.open.crdp.process.scanner.configuration.QueueConfig;
 import ca.bc.gov.open.crdp.process.scanner.services.ScannerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
-import java.io.IOException;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.*;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -34,7 +32,7 @@ public class ScannerServiceTests {
     @Mock private ScannerService controller;
 
     @BeforeAll
-    public void setUp() throws IOException {
+    public void setUp() {
         MockitoAnnotations.openMocks(this);
 
         controller =
@@ -46,40 +44,10 @@ public class ScannerServiceTests {
                                 restTemplate,
                                 objectMapper,
                                 rabbitTemplate));
-
-        String appPath = new File("").getCanonicalPath();
-        inFileDir = appPath + "/src/test/resources/test/processingIncoming/";
-
-        File backupFolder = new File(appPath + "/src/test/resources/backup/");
-        File testFolder = new File(appPath + "/src/test/resources/test/");
-
-        try {
-            FileUtils.deleteDirectory(testFolder);
-            FileUtils.copyDirectory(backupFolder, testFolder);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     @Test
-    public void scannerTest() throws IOException {
-        //        var fileName = inFileDir + "Processed_2020-03-24/ABCDO_Audit.000001.XML";
-        //        var processAuditResponse = new ProcessAuditResponse();
-        //        processAuditResponse.setResultCd("0");
-        //
-        //        ResponseEntity<ProcessAuditResponse> responseEntity =
-        //                new ResponseEntity<>(processAuditResponse, HttpStatus.OK);
-        //
-        //        //     Set up to mock ords response
-        //        when(restTemplate.exchange(
-        //                        Mockito.any(String.class),
-        //                        Mockito.eq(HttpMethod.POST),
-        //                        Mockito.<HttpEntity<String>>any(),
-        //                        Mockito.<Class<ProcessAuditResponse>>any()))
-        //                .thenReturn(responseEntity);
-        //
-        //        when(controller.validateXml(Mockito.any(String.class), Mockito.any(File.class)))
-        //                .thenReturn(true);
-        //        controller.processAuditSvc(fileName);
+    public void scannerTest() {
+        controller.CRDPScanner();
     }
 }
