@@ -18,9 +18,9 @@ public class SftpServiceImplListFileTest {
     private static final String CASE_3 = "case2";
     private static final String CASE_1 = "case1";
 
-    private static final String FILENAME_1 = "filename1";
-    private static final String FILENAME_2 = "filename2";
-    private static final String FILENAME_3 = "filename3";
+    private static final String FILENAME_1 = "test\\filename1";
+    private static final String FILENAME_2 = "test\\filename2";
+    private static final String FILENAME_3 = "test\\filename3";
 
     private static final String REMOTE = "remote";
     private static final String TEST_WINDOWS = "test\\windows";

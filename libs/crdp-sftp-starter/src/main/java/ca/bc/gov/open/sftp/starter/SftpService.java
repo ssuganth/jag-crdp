@@ -19,4 +19,14 @@ public interface SftpService {
     void put(InputStream inputFile, String remoteFileName);
 
     List<String> listFiles(String remoteDirectory);
+
+    void removeFolder(String folderPath);
+
+    void makeFolder(String folderPath);
+
+    boolean exists(String filePath);
+
+    boolean isDirectory(String filePath);
+
+    long lastModify(String filePath);
 }

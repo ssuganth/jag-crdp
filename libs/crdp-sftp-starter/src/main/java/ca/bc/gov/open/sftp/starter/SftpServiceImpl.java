@@ -1,17 +1,13 @@
 package ca.bc.gov.open.sftp.starter;
 
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-import com.jcraft.jsch.SftpException;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import com.jcraft.jsch.*;
+import java.io.*;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -37,7 +33,6 @@ public class SftpServiceImpl implements SftpService {
     }
 
     public ByteArrayInputStream getContent(String remoteFilename) {
-
         String sftpRemoteFilename = getFilePath(remoteFilename);
 
         ByteArrayInputStream result = null;
@@ -87,7 +82,6 @@ public class SftpServiceImpl implements SftpService {
      * @throws StarterSftpException
      */
     public void moveFile(String remoteFileName, String destinationFilename) {
-
         String sftpRemoteFilename = getFilePath(remoteFileName);
         String sftpDestinationFilename = getFilePath(destinationFilename);
 
@@ -139,7 +133,6 @@ public class SftpServiceImpl implements SftpService {
      */
     @Override
     public List<String> listFiles(String remoteDirectory) {
-
         String sftpRemoteDirectory = getFilePath(remoteDirectory);
         List<String> result = new ArrayList<>();
 
@@ -158,13 +151,86 @@ public class SftpServiceImpl implements SftpService {
         return result;
     }
 
-    private void executeSftpFunction(SftpFunction sftpFunction) {
+    @Override
+    public void removeFolder(String folderPath) {
+        executeSftpFunction(
+                channelSftp -> {
+                    channelSftp.rm(folderPath);
+                    logger.debug("Successfully removed folder [{}]", folderPath);
+                });
+    }
 
+    @Override
+    public void makeFolder(String folderPath) {
+        executeSftpFunction(
+                channelSftp -> {
+                    channelSftp.mkdir(folderPath);
+                    logger.debug("Successfully created folder [{}]", folderPath);
+                });
+    }
+
+    @Override
+    public boolean exists(String filePath) {
+        AtomicBoolean result = new AtomicBoolean(false);
+        executeSftpFunction(
+                channelSftp -> {
+                    try {
+                        channelSftp.lstat(filePath);
+                        result.set(true);
+                    } catch (SftpException e) {
+                        if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) {
+                            result.set(false);
+                        } else {
+                            logger.error(e.getMessage());
+                        }
+                    }
+                    logger.debug(filePath + " is found");
+                });
+        return result.get();
+    }
+
+    @Override
+    public boolean isDirectory(String filePath) {
+        AtomicBoolean result = new AtomicBoolean(false);
+        executeSftpFunction(
+                channelSftp -> {
+                    try {
+                        result.set(channelSftp.lstat(filePath).isDir());
+                        logger.debug(
+                                filePath
+                                        + " is a directory is "
+                                        + channelSftp.lstat(filePath).isDir());
+                    } catch (SftpException e) {
+                        logger.error(e.getMessage());
+                    }
+                });
+        return result.get();
+    }
+
+    @Override
+    public long lastModify(String filePath) {
+        AtomicLong result = new AtomicLong();
+        executeSftpFunction(
+                channelSftp -> {
+                    try {
+                        result.set(channelSftp.lstat(filePath).getMTime());
+                        logger.debug(
+                                "Last modified of "
+                                        + filePath
+                                        + " is "
+                                        + channelSftp.lstat(filePath).getMtimeString());
+                    } catch (SftpException e) {
+                        logger.error(e.getMessage());
+                    }
+                });
+        return result.get();
+    }
+
+    private void executeSftpFunction(SftpFunction sftpFunction) {
         ChannelSftp channelSftp = null;
         Session session = null;
 
         try {
-
             session = jschSessionProvider.getSession();
 
             logger.debug("Attempting to open sftp channel");
@@ -184,7 +250,6 @@ public class SftpServiceImpl implements SftpService {
     }
 
     private String getFilePath(String remotePath) {
-
         return FilenameUtils.separatorsToUnix(
                 StringUtils.isNotBlank(sftpProperties.getRemoteLocation())
                         ? Paths.get(sftpProperties.getRemoteLocation(), remotePath).toString()
