@@ -40,7 +40,7 @@ public class ScannerService {
     private int recordTTLHour = 24;
 
     @Autowired JschSessionProvider jschSessionProvider;
-    private final SftpServiceImpl sftpService;
+    private SftpServiceImpl sftpService;
     private final SftpProperties sftpProperties;
 
     private final RestTemplate restTemplate;
@@ -76,13 +76,13 @@ public class ScannerService {
         this.objectMapper = objectMapper;
         this.rabbitTemplate = rabbitTemplate;
         this.sftpProperties = sftpProperties;
-
-        sftpService = new SftpServiceImpl(jschSessionProvider, sftpProperties);
     }
 
     /** The primary method for the Java service to scan CRDP directory */
     @Scheduled(cron = "${crdp.cron-job-incoming-file}")
     public void CRDPScanner() {
+        sftpService = new SftpServiceImpl(jschSessionProvider, sftpProperties);
+
         // re-initialize arrays
         inProgressFilesToMove = new TreeMap<String, String>();
         inProgressFoldersToMove = new TreeMap<String, String>();

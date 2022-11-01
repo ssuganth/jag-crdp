@@ -12,6 +12,15 @@ crdp:
     scanner-routing-key: ${SCANNER_ROUTING_KEY}
     exchange-name: ${RABBIT_EXCHANGE_NAME}
 
+bcgov:
+  sftp:
+    host: ${SFEG_HOST:localhost}
+    port: ${SFEG_PORT:22}
+    username: ${SFEG_USERNAME}
+    remote-location: ${NFS_DIR}
+    known-hosts-file-name: ${SFTP_KNOWN_HOSTS}
+    ssh-private-key: ${SFTP_PRIVATE_KEY}
+
 management:
   endpoints:
     web:

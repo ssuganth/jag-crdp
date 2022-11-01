@@ -9,6 +9,15 @@ crdp:
   errors-dir: ${ERRORS_DIR}
   scanner-queue: ${SCANNER_QUEUE_NAME}
 
+bcgov:
+  sftp:
+    host: ${SFEG_HOST:localhost}
+    port: ${SFEG_PORT:22}
+    username: ${SFEG_USERNAME}
+    remote-location: ${NFS_DIR}
+    known-hosts-file-name: ${SFTP_KNOWN_HOSTS}
+    ssh-private-key: ${SFTP_PRIVATE_KEY}
+
 spring:
   rabbitmq:
     host: ${RABBIT_MQ_HOST}

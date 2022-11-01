@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.process.models.*;
 import ca.bc.gov.open.crdp.process.transformer.services.TransformerService;
+import ca.bc.gov.open.sftp.starter.SftpProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
@@ -31,12 +32,13 @@ public class TransformerServiceTests {
     @Mock private ObjectMapper objectMapper;
     @Mock private RestTemplate restTemplate;
     @Mock private TransformerService controller;
+    @Mock private SftpProperties sftpProperties;
 
     @BeforeAll
     public void setUp() throws IOException {
         MockitoAnnotations.openMocks(this);
 
-        controller = Mockito.spy(new TransformerService(restTemplate, objectMapper));
+        controller = Mockito.spy(new TransformerService(restTemplate, objectMapper, sftpProperties));
 
         String appPath = new File("").getCanonicalPath();
         inFileDir = appPath + "/src/test/resources/test/processingIncoming/";

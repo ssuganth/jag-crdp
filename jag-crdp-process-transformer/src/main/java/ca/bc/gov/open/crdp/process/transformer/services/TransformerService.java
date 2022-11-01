@@ -4,6 +4,9 @@ import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.models.OrdsErrorLog;
 import ca.bc.gov.open.crdp.models.RequestSuccessLog;
 import ca.bc.gov.open.crdp.process.models.*;
+import ca.bc.gov.open.sftp.starter.JschSessionProvider;
+import ca.bc.gov.open.sftp.starter.SftpProperties;
+import ca.bc.gov.open.sftp.starter.SftpServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -53,6 +56,11 @@ public class TransformerService {
 
     private String timestamp = null;
 
+    @Autowired
+    JschSessionProvider jschSessionProvider;
+    private final SftpServiceImpl sftpService;
+    private final SftpProperties sftpProperties;
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
@@ -81,9 +89,13 @@ public class TransformerService {
     DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
 
     @Autowired
-    public TransformerService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public TransformerService(RestTemplate restTemplate, ObjectMapper objectMapper,
+                              SftpProperties sftpProperties) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.sftpProperties = sftpProperties;
+
+        sftpService = new SftpServiceImpl(jschSessionProvider, sftpProperties);
     }
 
     public void recordScanningTime(String timestamp) {
