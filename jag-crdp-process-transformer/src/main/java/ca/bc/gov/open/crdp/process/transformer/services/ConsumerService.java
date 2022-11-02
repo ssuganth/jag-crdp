@@ -1,5 +1,6 @@
 package ca.bc.gov.open.crdp.process.transformer.services;
 
+import ca.bc.gov.open.crdp.process.models.ScannerPub;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -23,15 +24,7 @@ public class ConsumerService {
     }
 
     @RabbitListener(queues = "${crdp.scanner-queue}")
-    public void receiveScannerPubMessage(@Payload Message<String> message) {
-        if (message.getPayload().contains("scanning time:")) {
-            transformerService.recordScanningTime(
-                    message.getPayload()
-                            .substring(
-                                    message.getPayload().lastIndexOf("scanning time:")
-                                            + "scanning time:".length()));
-        } else {
-            transformerService.processFile(message.getPayload());
-        }
+    public void receiveScannerPubMessage(@Payload Message<ScannerPub> message) {
+        transformerService.processFileService(message.getPayload());
     }
 }

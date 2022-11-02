@@ -1,11 +1,9 @@
 package ca.bc.gov.open.crdp.process.scanner.services;
 
 import ca.bc.gov.open.crdp.models.MqErrorLog;
+import ca.bc.gov.open.crdp.process.models.ScannerPub;
 import ca.bc.gov.open.crdp.process.scanner.configuration.QueueConfig;
-import ca.bc.gov.open.sftp.starter.JschSessionProvider;
-import ca.bc.gov.open.sftp.starter.LocalFileImpl;
-import ca.bc.gov.open.sftp.starter.SftpProperties;
-import ca.bc.gov.open.sftp.starter.SftpServiceImpl;
+import ca.bc.gov.open.sftp.starter.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -40,8 +38,7 @@ public class ScannerService {
     private int recordTTLHour = 24;
 
     @Autowired JschSessionProvider jschSessionProvider;
-    private SftpServiceImpl fileService;
-    // private LocalFileImpl fileService;
+    private FileService fileService;
     private final SftpProperties sftpProperties;
 
     private final RestTemplate restTemplate;
@@ -82,8 +79,10 @@ public class ScannerService {
     /** The primary method for the Java service to scan CRDP directory */
     @Scheduled(cron = "${crdp.cron-job-incoming-file}")
     public void CRDPScanner() {
-        fileService = new SftpServiceImpl(jschSessionProvider, sftpProperties);
-        // fileService = new LocalFileImpl();
+        fileService =
+                false
+                        ? new SftpServiceImpl(jschSessionProvider, sftpProperties)
+                        : new LocalFileImpl();
 
         // re-initialize arrays
         inProgressFilesToMove = new TreeMap<String, String>();
@@ -94,7 +93,7 @@ public class ScannerService {
         // File object
         fileService.makeFolder(inFileDir);
 
-        if (fileService.exists(inFileDir)) {
+        if (fileService.exists(inFileDir) && fileService.isDirectory(inFileDir)) {
             // create inProgress folder
             if (!fileService.exists(inProgressDir)) {
                 fileService.makeFolder(inProgressDir);
@@ -110,30 +109,28 @@ public class ScannerService {
             }
 
             if (inProgressFilesToMove.isEmpty() && inProgressFoldersToMove.isEmpty()) {
-                log.info("No file/fold found, end current scan session: " + scanDateTime);
+                log.info("No file/fold found, closing current scan session: " + scanDateTime);
                 return;
             }
 
             try {
-                // enqueue a timestamp of current scan
-                enQueue("scanning time:" + customFormatter.format(scanDateTime));
-
                 // move files into in-progress folder
                 for (Entry<String, String> m : inProgressFilesToMove.entrySet()) {
                     fileService.moveFile(m.getKey(), m.getValue());
-                    enQueue(m.getValue());
+                    enQueue(new ScannerPub(m.getValue(), customFormatter.format(scanDateTime)));
                 }
 
                 for (Entry<String, String> m : inProgressFoldersToMove.entrySet()) {
-                    // fileService.put(new FileInputStream(m.getKey()), m.getValue());
                     fileService.moveFile(m.getKey(), m.getValue());
-                    enQueue(m.getValue());
+                    enQueue(new ScannerPub(m.getValue(), customFormatter.format(scanDateTime)));
                 }
                 cleanUp(inFileDir);
                 log.info("Scan Complete");
             } catch (Exception e) {
                 log.error(e.getMessage());
             }
+        } else {
+            log.error("Incoming file directory \"" + inFileDir + "\" does not exist");
         }
     }
 
@@ -217,21 +214,22 @@ public class ScannerService {
         else return false;
     }
 
-    private void enQueue(String filePath) throws JsonProcessingException {
+    private void enQueue(ScannerPub pub) throws JsonProcessingException {
         try {
             this.rabbitTemplate.convertAndSend(
-                    queueConfig.getTopicExchangeName(),
-                    queueConfig.getScannerRoutingkey(),
-                    filePath);
+                    queueConfig.getTopicExchangeName(), queueConfig.getScannerRoutingkey(), pub);
         } catch (Exception ex) {
             log.error(
                     objectMapper.writeValueAsString(
                             new MqErrorLog(
-                                    "Enqueue failed", "RecursiveScan", ex.getMessage(), filePath)));
+                                    "Enqueue failed",
+                                    "RecursiveScan",
+                                    ex.getMessage(),
+                                    pub.getFilePath())));
         }
     }
 
-    private String getFileName(String filePath) {
+    private static String getFileName(String filePath) {
         return filePath.substring(filePath.lastIndexOf("\\") + 1);
     }
 }
