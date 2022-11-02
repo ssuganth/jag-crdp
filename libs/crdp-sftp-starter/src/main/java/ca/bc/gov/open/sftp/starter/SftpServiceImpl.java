@@ -81,6 +81,7 @@ public class SftpServiceImpl implements SftpService {
      * @param destinationFilename
      * @throws StarterSftpException
      */
+    @Override
     public void moveFile(String remoteFileName, String destinationFilename) {
         String sftpRemoteFilename = getFilePath(remoteFileName);
         String sftpDestinationFilename = getFilePath(destinationFilename);

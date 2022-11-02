@@ -56,8 +56,7 @@ public class TransformerService {
 
     private String timestamp = null;
 
-    @Autowired
-    JschSessionProvider jschSessionProvider;
+    @Autowired JschSessionProvider jschSessionProvider;
     private final SftpServiceImpl sftpService;
     private final SftpProperties sftpProperties;
 
@@ -89,8 +88,8 @@ public class TransformerService {
     DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
 
     @Autowired
-    public TransformerService(RestTemplate restTemplate, ObjectMapper objectMapper,
-                              SftpProperties sftpProperties) {
+    public TransformerService(
+            RestTemplate restTemplate, ObjectMapper objectMapper, SftpProperties sftpProperties) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.sftpProperties = sftpProperties;

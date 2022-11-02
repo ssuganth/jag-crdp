@@ -38,7 +38,8 @@ public class TransformerServiceTests {
     public void setUp() throws IOException {
         MockitoAnnotations.openMocks(this);
 
-        controller = Mockito.spy(new TransformerService(restTemplate, objectMapper, sftpProperties));
+        controller =
+                Mockito.spy(new TransformerService(restTemplate, objectMapper, sftpProperties));
 
         String appPath = new File("").getCanonicalPath();
         inFileDir = appPath + "/src/test/resources/test/processingIncoming/";

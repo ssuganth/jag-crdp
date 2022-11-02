@@ -3,11 +3,10 @@ package ca.bc.gov.open.crdp.process.scanner.services;
 import ca.bc.gov.open.crdp.models.MqErrorLog;
 import ca.bc.gov.open.crdp.process.scanner.configuration.QueueConfig;
 import ca.bc.gov.open.sftp.starter.JschSessionProvider;
+import ca.bc.gov.open.sftp.starter.LocalFileImpl;
 import ca.bc.gov.open.sftp.starter.SftpProperties;
-import ca.bc.gov.open.sftp.starter.SftpServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -40,7 +39,8 @@ public class ScannerService {
     private int recordTTLHour = 24;
 
     @Autowired JschSessionProvider jschSessionProvider;
-    private SftpServiceImpl sftpService;
+    //    private SftpServiceImpl fileService;
+    private LocalFileImpl fileService;
     private final SftpProperties sftpProperties;
 
     private final RestTemplate restTemplate;
@@ -81,7 +81,8 @@ public class ScannerService {
     /** The primary method for the Java service to scan CRDP directory */
     @Scheduled(cron = "${crdp.cron-job-incoming-file}")
     public void CRDPScanner() {
-        sftpService = new SftpServiceImpl(jschSessionProvider, sftpProperties);
+        //        fileService = new SftpServiceImpl(jschSessionProvider, sftpProperties);
+        fileService = new LocalFileImpl();
 
         // re-initialize arrays
         inProgressFilesToMove = new TreeMap<String, String>();
@@ -90,15 +91,15 @@ public class ScannerService {
         LocalDateTime scanDateTime = LocalDateTime.now();
 
         // File object
-        sftpService.makeFolder(inFileDir);
+        fileService.makeFolder(inFileDir);
 
-        if (sftpService.exists(inFileDir)) {
+        if (fileService.exists(inFileDir)) {
             // create inProgress folder
-            if (!sftpService.exists(inProgressDir)) {
-                sftpService.makeFolder(inProgressDir);
+            if (!fileService.exists(inProgressDir)) {
+                fileService.makeFolder(inProgressDir);
             }
 
-            String[] arr = sftpService.listFiles(inFileDir).toArray(new String[0]);
+            String[] arr = fileService.listFiles(inFileDir).toArray(new String[0]);
 
             // Calling recursive method
             try {
@@ -118,12 +119,13 @@ public class ScannerService {
 
                 // move files into in-progress folder
                 for (Entry<String, String> m : inProgressFilesToMove.entrySet()) {
-                    sftpService.moveFile(m.getKey(), m.getValue());
+                    fileService.moveFile(m.getKey(), m.getValue());
                     enQueue(m.getValue());
                 }
 
                 for (Entry<String, String> m : inProgressFoldersToMove.entrySet()) {
-                    sftpService.put(new FileInputStream(m.getKey()), m.getValue());
+                    // fileService.put(new FileInputStream(m.getKey()), m.getValue());
+                    fileService.moveFile(m.getKey(), m.getValue());
                     enQueue(m.getValue());
                 }
                 cleanUp(inFileDir);
@@ -136,21 +138,21 @@ public class ScannerService {
 
     private void cleanUp(String headFolderPath) {
         // delete processed folders (delivered from Ottawa).
-        for (var folder : sftpService.listFiles(headFolderPath)) {
-            if (getFileName(folder).equals("inProgress")) {
+        for (var folder : fileService.listFiles(headFolderPath)) {
+            if (!fileService.isDirectory(folder) || getFileName(folder).equals("inProgress")) {
                 continue;
             }
 
             if (getFileName(folder).equals("Errors") || getFileName(folder).equals("Completed")) {
-                for (var f : sftpService.listFiles(folder)) {
-                    if (new Date().getTime() - sftpService.lastModify(f)
+                for (var f : fileService.listFiles(folder)) {
+                    if (new Date().getTime() - fileService.lastModify(f)
                             > recordTTLHour * 60 * 60 * 1000) {
-                        sftpService.removeFolder(f);
+                        fileService.removeFolder(f);
                     }
                 }
                 continue;
             }
-            sftpService.removeFolder(folder);
+            fileService.removeFolder(folder);
         }
     }
 
@@ -159,13 +161,13 @@ public class ScannerService {
         if (index == arr.length) return;
         try {
             // for root folder files (Audit and Status).
-            if (!sftpService.isDirectory(arr[index])) {
+            if (!fileService.isDirectory(arr[index])) {
                 inProgressFilesToMove.put(
                         arr[index], inProgressDir + Paths.get(arr[index]).getFileName().toString());
             }
 
             // for sub-directories
-            if (sftpService.isDirectory(arr[index])) {
+            if (fileService.isDirectory(arr[index])) {
                 // Retain the name of the current process folder short name
                 // and add to list for deletion at the end of processing.
                 if (isProcessedFolder(getFileName(arr[index]))) {
@@ -183,7 +185,7 @@ public class ScannerService {
                     } else {
                         // recursion for sub-directories
                         recursiveScan(
-                                sftpService.listFiles(arr[index]).toArray(new String[0]),
+                                fileService.listFiles(arr[index]).toArray(new String[0]),
                                 0,
                                 level + 1);
                     }
@@ -229,6 +231,6 @@ public class ScannerService {
     }
 
     private String getFileName(String filePath) {
-        return filePath.substring(filePath.lastIndexOf("/") + 1);
+        return filePath.substring(filePath.lastIndexOf("\\") + 1);
     }
 }
