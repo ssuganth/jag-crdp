@@ -4,21 +4,17 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.List;
 
-public interface SftpService {
+public interface FileService {
 
-    ByteArrayInputStream getContent(String remoteFilename);
+    ByteArrayInputStream getContent(String filename);
 
-    /**
-     * @param inputFileName the content to be uploaded
-     * @param remoteFileName the remote filename
-     */
     void put(String inputFileName, String remoteFileName);
 
-    void put(InputStream inputFile, String remoteFileName);
+    void put(InputStream inputStream, String remoteFileName);
 
-    void moveFile(String remoteFileName, String destinationFilename);
+    void moveFile(String sourceFileName, String destinationFilename);
 
-    List<String> listFiles(String remoteDirectory);
+    List<String> listFiles(String directory);
 
     void removeFolder(String folderPath);
 

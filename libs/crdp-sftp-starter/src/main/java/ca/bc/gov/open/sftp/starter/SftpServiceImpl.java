@@ -13,7 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SftpServiceImpl implements SftpService {
+public class SftpServiceImpl implements FileService {
 
     interface SftpFunction {
         void exec(ChannelSftp channelSftp) throws SftpException;
@@ -32,8 +32,14 @@ public class SftpServiceImpl implements SftpService {
         this.sftpProperties = sftpProperties;
     }
 
-    public ByteArrayInputStream getContent(String remoteFilename) {
-        String sftpRemoteFilename = getFilePath(remoteFilename);
+    /**
+     * Get file content in byte array
+     *
+     * @param filename
+     */
+    @Override
+    public ByteArrayInputStream getContent(String filename) {
+        String sftpRemoteFilename = getFilePath(filename);
 
         ByteArrayInputStream result = null;
         byte[] buff = new byte[BUFFER_SIZE];
@@ -75,27 +81,11 @@ public class SftpServiceImpl implements SftpService {
     }
 
     /**
-     * Move the file to a destination
+     * Put the file to a destination
      *
+     * @param inputFileName
      * @param remoteFileName
-     * @param destinationFilename
-     * @throws StarterSftpException
      */
-    @Override
-    public void moveFile(String remoteFileName, String destinationFilename) {
-        String sftpRemoteFilename = getFilePath(remoteFileName);
-        String sftpDestinationFilename = getFilePath(destinationFilename);
-
-        executeSftpFunction(
-                channelSftp -> {
-                    channelSftp.rename(sftpRemoteFilename, sftpDestinationFilename);
-                    logger.debug(
-                            "Successfully renamed files on the sftp server from {} to {}",
-                            sftpRemoteFilename,
-                            sftpDestinationFilename);
-                });
-    }
-
     @Override
     public void put(String inputFileName, String remoteFileName) {
         String sftpRemoteFilename;
@@ -115,26 +105,53 @@ public class SftpServiceImpl implements SftpService {
                 });
     }
 
+    /**
+     * Put the file with input stream to a destination
+     *
+     * @param inputStream
+     * @param remoteFileName
+     */
     @Override
-    public void put(InputStream inputFile, String remoteFileName) {
+    public void put(InputStream inputStream, String remoteFileName) {
         String sftpRemoteFilename = getFilePath(remoteFileName);
 
         executeSftpFunction(
                 channelSftp -> {
-                    channelSftp.put(inputFile, sftpRemoteFilename);
+                    channelSftp.put(inputStream, sftpRemoteFilename);
                     logger.debug("Successfully uploaded file [{}]", remoteFileName);
                 });
     }
 
     /**
-     * Returns a list of file
+     * Move the file to a destination
      *
-     * @param remoteDirectory
-     * @return
+     * @param sourceFileName
+     * @param destinationFilename
      */
     @Override
-    public List<String> listFiles(String remoteDirectory) {
-        String sftpRemoteDirectory = getFilePath(remoteDirectory);
+    public void moveFile(String sourceFileName, String destinationFilename) {
+        String sftpRemoteFilename = getFilePath(sourceFileName);
+        String sftpDestinationFilename = getFilePath(destinationFilename);
+
+        executeSftpFunction(
+                channelSftp -> {
+                    channelSftp.rename(sftpRemoteFilename, sftpDestinationFilename);
+                    logger.debug(
+                            "Successfully renamed files on the sftp server from {} to {}",
+                            sftpRemoteFilename,
+                            sftpDestinationFilename);
+                });
+    }
+
+    /**
+     * List all files and folders under the directory
+     *
+     * @param directory
+     * @return list of files and folders names
+     */
+    @Override
+    public List<String> listFiles(String directory) {
+        String sftpRemoteDirectory = getFilePath(directory);
         List<String> result = new ArrayList<>();
 
         executeSftpFunction(
@@ -142,9 +159,9 @@ public class SftpServiceImpl implements SftpService {
                     Vector fileList = channelSftp.ls(sftpRemoteDirectory);
 
                     for (int i = 0; i < fileList.size(); i++) {
-                        logger.debug("Attempting to list files in [{}]", remoteDirectory);
+                        logger.debug("Attempting to list files in [{}]", directory);
                         ChannelSftp.LsEntry lsEntry = (ChannelSftp.LsEntry) fileList.get(i);
-                        logger.debug("Successfully to list files in [{}]", remoteDirectory);
+                        logger.debug("Successfully to list files in [{}]", directory);
                         result.add(lsEntry.getFilename());
                     }
                 });
@@ -152,6 +169,11 @@ public class SftpServiceImpl implements SftpService {
         return result;
     }
 
+    /**
+     * Remove the directory under the folder path
+     *
+     * @param folderPath
+     */
     @Override
     public void removeFolder(String folderPath) {
         executeSftpFunction(
@@ -161,6 +183,11 @@ public class SftpServiceImpl implements SftpService {
                 });
     }
 
+    /**
+     * Create a folder
+     *
+     * @param folderPath
+     */
     @Override
     public void makeFolder(String folderPath) {
         executeSftpFunction(
@@ -170,6 +197,12 @@ public class SftpServiceImpl implements SftpService {
                 });
     }
 
+    /**
+     * Check if a file exists
+     *
+     * @param filePath
+     * @return true/false of file existence
+     */
     @Override
     public boolean exists(String filePath) {
         AtomicBoolean result = new AtomicBoolean(false);
@@ -190,6 +223,12 @@ public class SftpServiceImpl implements SftpService {
         return result.get();
     }
 
+    /**
+     * Check if a file is a directory/folder
+     *
+     * @param filePath
+     * @return true/false of if file is a directory
+     */
     @Override
     public boolean isDirectory(String filePath) {
         AtomicBoolean result = new AtomicBoolean(false);
@@ -208,6 +247,12 @@ public class SftpServiceImpl implements SftpService {
         return result.get();
     }
 
+    /**
+     * Get the last datetime timestamp of a file
+     *
+     * @param filePath
+     * @return long timestamp
+     */
     @Override
     public long lastModify(String filePath) {
         AtomicLong result = new AtomicLong();
@@ -227,6 +272,7 @@ public class SftpServiceImpl implements SftpService {
         return result.get();
     }
 
+    /** The primary method for executing sftp apis from ChannelSftp lib */
     private void executeSftpFunction(SftpFunction sftpFunction) {
         ChannelSftp channelSftp = null;
         Session session = null;
@@ -250,6 +296,7 @@ public class SftpServiceImpl implements SftpService {
         }
     }
 
+    /** The primary method for getting remote file's full path */
     private String getFilePath(String remotePath) {
         return FilenameUtils.separatorsToUnix(
                 StringUtils.isNotBlank(sftpProperties.getRemoteLocation())

@@ -5,6 +5,7 @@ import ca.bc.gov.open.crdp.process.scanner.configuration.QueueConfig;
 import ca.bc.gov.open.sftp.starter.JschSessionProvider;
 import ca.bc.gov.open.sftp.starter.LocalFileImpl;
 import ca.bc.gov.open.sftp.starter.SftpProperties;
+import ca.bc.gov.open.sftp.starter.SftpServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -39,8 +40,8 @@ public class ScannerService {
     private int recordTTLHour = 24;
 
     @Autowired JschSessionProvider jschSessionProvider;
-    //    private SftpServiceImpl fileService;
-    private LocalFileImpl fileService;
+    private SftpServiceImpl fileService;
+    // private LocalFileImpl fileService;
     private final SftpProperties sftpProperties;
 
     private final RestTemplate restTemplate;
@@ -81,8 +82,8 @@ public class ScannerService {
     /** The primary method for the Java service to scan CRDP directory */
     @Scheduled(cron = "${crdp.cron-job-incoming-file}")
     public void CRDPScanner() {
-        //        fileService = new SftpServiceImpl(jschSessionProvider, sftpProperties);
-        fileService = new LocalFileImpl();
+        fileService = new SftpServiceImpl(jschSessionProvider, sftpProperties);
+        // fileService = new LocalFileImpl();
 
         // re-initialize arrays
         inProgressFilesToMove = new TreeMap<String, String>();
