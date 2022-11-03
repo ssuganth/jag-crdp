@@ -34,27 +34,87 @@ jobs:
       - name: Maven Verify
         run: mvn -ntp clean verify
 
-      - name: Build image jag-crdp from Dockerfile
+      - name: Build image jag-crdp-transmit-receiver from Dockerfile
         env:
           COMPOSE_DOCKER_CLI_BUILD: 1
           DOCKER_BUILDKIT: 1
-          CONTEXT: .
+          CONTEXT: ./jag-crdp-transmit-receiver
         run: |
-          docker build -t docker.io/crdp/jag-crdp:${{ github.sha }} ${CONTEXT}
+          docker build -t docker.io/crdp/jag-crdp-transmit-receiver:${{ github.sha }} ${CONTEXT}
 
-      #Run Vulnerability Scan usinig Trivy scanner
-      - name: Run Trivy vulnerability scanner for jag-crdp image
+      # Run Vulnerability Scan using Trivy scanner
+      - name: Run Trivy vulnerability scanner for jag-crdp-transmit-receiver image
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: image
-          image-ref: docker.io/crdp/jag-crdp:${{ github.sha }}
+          image-ref: docker.io/crdp/jag-crdp-transmit-receiver:${{ github.sha }}
           format: sarif
           output: trivy-results.sarif
           exit-code: 1
           ignore-unfixed: true
           severity: HIGH,CRITICAL
 
-      #Upload results to the Github security tab.
+      - name: Build image jag-crdp-transmit-sender from Dockerfile
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: 1
+          DOCKER_BUILDKIT: 1
+          CONTEXT: ./jag-crdp-transmit-sender
+        run: |
+          docker build -t docker.io/crdp/jag-crdp-transmit-sender:${{ github.sha }} ${CONTEXT}
+
+      # Run Vulnerability Scan using Trivy scanner
+      - name: Run Trivy vulnerability scanner for jag-crdp-transmit-sender image
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: docker.io/crdp/jag-crdp-transmit-sender:${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: 1
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Build image jag-crdp-process-scanner from Dockerfile
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: 1
+          DOCKER_BUILDKIT: 1
+          CONTEXT: ./jag-crdp-process-scanner
+        run: |
+          docker build -t docker.io/crdp/jag-crdp-process-scanner:${{ github.sha }} ${CONTEXT}
+
+      # Run Vulnerability Scan using Trivy scanner
+      - name: Run Trivy vulnerability scanner for jag-crdp-process-scanner image
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: docker.io/crdp/jag-crdp-process-scanner:${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: 1
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Build image jag-crdp-process-transformer from Dockerfile
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: 1
+          DOCKER_BUILDKIT: 1
+          CONTEXT: ./jag-crdp-process-transformer
+        run: |
+          docker build -t docker.io/crdp/jag-crdp-process-transformer:${{ github.sha }} ${CONTEXT}
+
+      # Run Vulnerability Scan using Trivy scanner
+      - name: Run Trivy vulnerability scanner for jag-crdp-process-transformer image
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: docker.io/crdp/jag-crdp-process-transformer:${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: 1
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      # Upload results to the Github security tab.
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
         if: always()
