@@ -217,7 +217,7 @@
     </dependencies>
 
     <build>
-        <finalName>jag-crdp-application</finalName>
+        <finalName>jag-crdp-transmit-receiver</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

@@ -223,7 +223,7 @@
     </dependencies>
 
     <build>
-        <finalName>jag-crdp-application</finalName>
+        <finalName>jag-crdp-process-scanner</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
