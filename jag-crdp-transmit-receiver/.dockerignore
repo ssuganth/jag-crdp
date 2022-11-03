@@ -1,0 +1,5 @@
+# Ignore everything
+*
+
+# Allow files and directories
+!./jag-crdp-transmit-receiver/target/jag-crdp-transmit-receiver.jar
