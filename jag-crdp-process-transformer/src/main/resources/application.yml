@@ -1,0 +1,33 @@
+security:
+  basic-auth:
+    password: ${BASIC_AUTH_PASS}
+    username: ${BASIC_AUTH_USER}
+crdp:
+  host: ${ORDS_HOST}
+  in-progress-dir: ${IN_PROGRESS_DIR}
+  completed-dir: ${COMPLETED_DIR}
+  errors-dir: ${ERRORS_DIR}
+  scanner-queue: ${SCANNER_QUEUE_NAME}
+
+bcgov:
+  sftp:
+    host: ${SFEG_HOST:localhost}
+    port: ${SFEG_PORT:22}
+    username: ${SFEG_USERNAME}
+    remote-location: ${NFS_DIR}
+    known-hosts-file-name: ${SFTP_KNOWN_HOSTS}
+    ssh-private-key: ${SFTP_PRIVATE_KEY}
+
+spring:
+  rabbitmq:
+    host: ${RABBIT_MQ_HOST}
+    port: 5672
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics,prometheus,health
+
+server:
+  port: 8084

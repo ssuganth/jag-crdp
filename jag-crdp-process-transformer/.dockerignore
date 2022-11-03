@@ -1,0 +1,5 @@
+# Ignore everything
+*
+
+# Allow files and directories
+!./jag-crdp-process-transformer/target/jag-crdp-process-transformer.jar

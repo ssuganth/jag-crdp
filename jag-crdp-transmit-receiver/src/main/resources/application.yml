@@ -1,0 +1,27 @@
+security:
+  basic-auth:
+    password: ${BASIC_AUTH_PASS}
+    username: ${BASIC_AUTH_USER}
+crdp:
+  host: ${ORDS_HOST}
+  out-file-dir: ${OUTGOING_FILE_DIR}
+  cron-job-outgoing-file:  ${CRON_JOB_OUTGOING_FILE}
+  rabbitmq:
+    ords-host: ${ORDS_HOST}
+    receiver-queue: ${RECEIVER_QUEUE_NAME}
+    receiver-routing-key: ${RECEIVER_ROUTING_KEY}
+    exchange-name: ${RABBIT_EXCHANGE_NAME}
+
+spring:
+  rabbitmq:
+    host: ${RABBIT_MQ_HOST}
+    port: 5672
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics,prometheus,health
+
+server:
+  port: 8081

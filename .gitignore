@@ -38,3 +38,9 @@ build/
 cc-test-reporter
 /TestErrors.zip
 
+/src/test/resources/test/
+
+/.ssh/*
+/*.xml
+/temp-xmls/*
+/test/home/*
