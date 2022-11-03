@@ -230,6 +230,15 @@ public class ScannerService {
     }
 
     private static String getFileName(String filePath) {
-        return filePath.substring(filePath.lastIndexOf("\\") + 1);
+        if (filePath.contains("\\") && !filePath.contains("/")) {
+            // Windows path
+            return filePath.substring(filePath.lastIndexOf("\\") + 1);
+        } else if (filePath.contains("/") && !filePath.contains("\\")) {
+            // Linux path
+            return filePath.substring(filePath.lastIndexOf("/") + 1);
+        } else {
+            log.warn("Invalid file path: " + filePath);
+            return filePath;
+        }
     }
 }

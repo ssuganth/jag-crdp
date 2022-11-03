@@ -377,11 +377,11 @@ public class TransformerService {
         File xmlFile = null;
         if (folderShortName.equals("CCs")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_CCs.XML");
-            xmlFile = new File(folderName + "\\" + fileName);
+            xmlFile = new File(folderName + "/" + fileName);
             isValid = validateXml(ccSchemaPath, xmlFile);
         } else if (folderShortName.equals("Letters")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_Letters.XML");
-            xmlFile = new File(folderName + "\\" + fileName);
+            xmlFile = new File(folderName + "/" + fileName);
             isValid = validateXml(lettersSchemaPath, xmlFile);
         } else {
             log.error("Unexpected folder short name: " + folderShortName);
@@ -672,6 +672,15 @@ public class TransformerService {
     }
 
     private static String getFileName(String filePath) {
-        return filePath.substring(filePath.lastIndexOf("/") + 1);
+        if (filePath.contains("\\") && !filePath.contains("/")) {
+            // Windows path
+            return filePath.substring(filePath.lastIndexOf("\\") + 1);
+        } else if (filePath.contains("/") && !filePath.contains("\\")) {
+            // Linux path
+            return filePath.substring(filePath.lastIndexOf("/") + 1);
+        } else {
+            log.warn("Invalid file path: " + filePath);
+            return filePath;
+        }
     }
 }
