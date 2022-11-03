@@ -90,7 +90,7 @@ jobs:
           DOCKER_BUILDKIT: 1
           CONTEXT: ./jag-crdp-transmit-receiver
         run: |
-          docker build -t ${{github.event.inputs.app}}:${{env.gitsha}} ${CONTEXT}
+          docker build -t ${{github.event.inputs.app1}}:${{env.gitsha}} ${CONTEXT}
 
       # Build image jag-crdp-transmit-sender
       - name: Build image jag-crdp-transmit-sender
@@ -99,7 +99,7 @@ jobs:
           DOCKER_BUILDKIT: 1
           CONTEXT: ./jag-crdp-transmit-sender
         run: |
-          docker build -t ${{github.event.inputs.app}}:${{env.gitsha}} ${CONTEXT}
+          docker build -t ${{github.event.inputs.app2}}:${{env.gitsha}} ${CONTEXT}
 
       # Build image jag-crdp-process-scanner
       - name: Build image jag-crdp-process-scanner
@@ -108,7 +108,7 @@ jobs:
           DOCKER_BUILDKIT: 1
           CONTEXT: ./jag-crdp-process-scanner
         run: |
-          docker build -t ${{github.event.inputs.app}}:${{env.gitsha}} ${CONTEXT}
+          docker build -t ${{github.event.inputs.app3}}:${{env.gitsha}} ${CONTEXT}
 
       # Build image jag-crdp-process-transformer
       - name: Build image jag-crdp-process-transformer
@@ -117,7 +117,7 @@ jobs:
           DOCKER_BUILDKIT: 1
           CONTEXT: ./jag-crdp-process-transformer
         run: |
-          docker build -t ${{github.event.inputs.app}}:${{env.gitsha}} ${CONTEXT}
+          docker build -t ${{github.event.inputs.app4}}:${{env.gitsha}} ${CONTEXT}
 
       # Login to OpenShift Container Repository - Kamloops (OC GOLD)
       - name: Login to OpenShift Container Repository - Kamloops (OC GOLD)
