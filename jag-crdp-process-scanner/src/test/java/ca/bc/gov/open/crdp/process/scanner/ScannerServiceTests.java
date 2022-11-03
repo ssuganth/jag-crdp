@@ -4,6 +4,7 @@ import static org.mockito.Mockito.*;
 
 import ca.bc.gov.open.crdp.process.scanner.configuration.QueueConfig;
 import ca.bc.gov.open.crdp.process.scanner.services.ScannerService;
+import ca.bc.gov.open.sftp.starter.SftpProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.mockito.Mock;
@@ -18,13 +19,12 @@ import org.springframework.web.client.RestTemplate;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ScannerServiceTests {
 
-    private String inFileDir;
-
     @Mock private ObjectMapper objectMapper;
     @Mock private RestTemplate restTemplate;
     @Mock private RabbitTemplate rabbitTemplate;
     @Mock private AmqpAdmin amqpAdmin;
     @Mock private QueueConfig queueConfig;
+    @Mock private SftpProperties sftpProperties;
 
     @Qualifier("scanner-queue")
     private org.springframework.amqp.core.Queue scannerQueue;
@@ -43,11 +43,13 @@ public class ScannerServiceTests {
                                 queueConfig,
                                 restTemplate,
                                 objectMapper,
-                                rabbitTemplate));
+                                rabbitTemplate,
+                                sftpProperties));
     }
 
     @Test
     public void scannerTest() {
+        doNothing().when(controller).CRDPScanner();
         controller.CRDPScanner();
     }
 }

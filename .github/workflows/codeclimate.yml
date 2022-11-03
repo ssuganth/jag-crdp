@@ -85,7 +85,7 @@ jobs:
 
         # Formatting the Code Coverage Report
       - name: Format the coverage report
-        run: JACOCO_SOURCE_PATH="jag-crdp-application/src/main/java" ./cc-test-reporter format-coverage crdp-code-coverage/target/site/jacoco-aggregate/jacoco-codeclimatecompat.xml --input-type jacoco -o ./target/site/jacoco/codeclimate.json
+        run: JACOCO_SOURCE_PATH="jag-crdp-transmit-receiver/src/main/java jag-crdp-transmit-sender/src/main/java jag-crdp-process-scanner/src/main/java jag-crdp-process-transformer/src/main/java" ./cc-test-reporter format-coverage crdp-code-coverage/target/site/jacoco-aggregate/jacoco-codeclimatecompat.xml --input-type jacoco -o ./target/site/jacoco/codeclimate.json
 
 # Upload JSON for debugging purposes
       - name: Upload JSON for debugging purposes

@@ -7,10 +7,22 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
-        app:
-            description: 'App Name (jag-crdp)'
+        app1:
+            description: 'App Name (jag-crdp-transmit-receiver)'
             required: true
-            default: 'jag-crdp'
+            default: 'jag-crdp-transmit-receiver'
+        app2:
+          description: 'App Name (jag-crdp-transmit-sender)'
+          required: true
+          default: 'jag-crdp-transmit-sender'
+        app3:
+          description: 'App Name (jag-crdp-process-scanner)'
+          required: true
+          default: 'jag-crdp-process-scanner'
+        app4:
+          description: 'App Name (jag-crdp-process-transformer)'
+          required: true
+          default: 'jag-crdp-process-transformer'
         env:
             description: 'Image Target Env'  
             required: true
@@ -71,49 +83,124 @@ jobs:
       - name: Maven Spotless Check
         run: mvn -ntp spotless:check
       
-      #Build image jag-crdp
-      - name: Build image jag-crdp
+      # Build image jag-crdp-transmit-receiver
+      - name: Build image jag-crdp-transmit-receiver
         env:
           COMPOSE_DOCKER_CLI_BUILD: 1
           DOCKER_BUILDKIT: 1
-          CONTEXT: .
+          CONTEXT: ./jag-crdp-transmit-receiver
         run: |
           docker build -t ${{github.event.inputs.app}}:${{env.gitsha}} ${CONTEXT}
 
-      #Login to OpenShift Container Repository - Kamloops (OC PROD)
-      - name: Login to OpenShift Container Repository - Kamloops (OC PROD)
+      # Build image jag-crdp-transmit-sender
+      - name: Build image jag-crdp-transmit-sender
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: 1
+          DOCKER_BUILDKIT: 1
+          CONTEXT: ./jag-crdp-transmit-sender
+        run: |
+          docker build -t ${{github.event.inputs.app}}:${{env.gitsha}} ${CONTEXT}
+
+      # Build image jag-crdp-process-scanner
+      - name: Build image jag-crdp-process-scanner
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: 1
+          DOCKER_BUILDKIT: 1
+          CONTEXT: ./jag-crdp-process-scanner
+        run: |
+          docker build -t ${{github.event.inputs.app}}:${{env.gitsha}} ${CONTEXT}
+
+      # Build image jag-crdp-process-transformer
+      - name: Build image jag-crdp-process-transformer
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: 1
+          DOCKER_BUILDKIT: 1
+          CONTEXT: ./jag-crdp-process-transformer
+        run: |
+          docker build -t ${{github.event.inputs.app}}:${{env.gitsha}} ${CONTEXT}
+
+      # Login to OpenShift Container Repository - Kamloops (OC GOLD)
+      - name: Login to OpenShift Container Repository - Kamloops (OC GOLD)
         uses: docker/login-action@v1
         with:
           registry: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY}}
           username: ${{secrets.OPENSHIFT_SA_USERNAME}}
           password: ${{secrets.OPENSHIFT_SA_PASSWORD}}
 
-      #Push image jag-crdp to OpenShift Image stream - Kamloops (OC Prod)
-      - name: Push Image jag-crdp to Openshift Image Stream - Kamloops (OC Prod)
+      # Push image jag-crdp-transmit-receiver to OpenShift Image stream - Kamloops (OC GOLD)
+      - name: Push Image jag-crdp-transmit-receiver to Openshift Image Stream - Kamloops (OC GOLD)
         env:
           IMAGE: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY}}/${{secrets.OPENSHIFT_TOOLS_NAMESPACE}}/${{github.event.inputs.app}}:${{secrets.OPENSHIFT_ENV_TAG}}
         run: |
-          docker tag ${{github.event.inputs.app}}:${{env.gitsha}} ${IMAGE}
+          docker tag ${{github.event.inputs.app1}}:${{env.gitsha}} ${IMAGE}
           docker push ${IMAGE}
-      
-      #Login to OpenShift Container Repository - Calgary (OC DR)
-      - name: Login to OpenShift Container Repository - Calgary (OC DR)
-        uses: docker/login-action@v1
-        with:
-          registry: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY_DR}}
-          username: ${{secrets.OPENSHIFT_SA_USERNAME}}
-          password: ${{secrets.OPENSHIFT_SA_PASSWORD_DR}}
 
-      #Push image jag-crdp  to OpenShift Image stream - Calgary (OC DR)
-      - name: Push Image jag-crdp  to Openshift Image Stream - Calgary (OC DR)
+      # Push image jag-crdp-transmit-sender to OpenShift Image stream - Kamloops (OC GOLD)
+      - name: Push Image jag-crdp-transmit-sender to Openshift Image Stream - Kamloops (OC GOLD)
         env:
-          IMAGE: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY_DR}}/${{secrets.OPENSHIFT_TOOLS_NAMESPACE}}/${{github.event.inputs.app}}:${{secrets.OPENSHIFT_ENV_TAG}}
+          IMAGE: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY}}/${{secrets.OPENSHIFT_TOOLS_NAMESPACE}}/${{github.event.inputs.app}}:${{secrets.OPENSHIFT_ENV_TAG}}
         run: |
-          docker tag ${{github.event.inputs.app}}:${{env.gitsha}} ${IMAGE}
+          docker tag ${{github.event.inputs.app2}}:${{env.gitsha}} ${IMAGE}
+          docker push ${IMAGE}
+
+      # Push image jag-crdp-process-scanner to OpenShift Image stream - Kamloops (OC GOLD)
+      - name: Push Image jag-crdp-process-scanner to Openshift Image Stream - Kamloops (OC GOLD)
+        env:
+          IMAGE: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY}}/${{secrets.OPENSHIFT_TOOLS_NAMESPACE}}/${{github.event.inputs.app}}:${{secrets.OPENSHIFT_ENV_TAG}}
+        run: |
+          docker tag ${{github.event.inputs.app3}}:${{env.gitsha}} ${IMAGE}
+          docker push ${IMAGE}
+
+      # Push image jag-crdp-process-transformer to OpenShift Image stream - Kamloops (OC GOLD)
+      - name: Push Image jag-crdp-process-transformer to Openshift Image Stream - Kamloops (OC GOLD)
+        env:
+          IMAGE: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY}}/${{secrets.OPENSHIFT_TOOLS_NAMESPACE}}/${{github.event.inputs.app}}:${{secrets.OPENSHIFT_ENV_TAG}}
+        run: |
+          docker tag ${{github.event.inputs.app4}}:${{env.gitsha}} ${IMAGE}
           docker push ${IMAGE}
       
-      #Login to Openshift using OC SA and Token of respective env. for Pod labelling - Kamloops (OC PROD)
-      - name: Authenticate OC Env Specific SA - Kamloops (OC PROD)
+#      # Login to OpenShift Container Repository - Calgary (OC GOLDDR)
+#      - name: Login to OpenShift Container Repository - Calgary (OC GOLDDR)
+#        uses: docker/login-action@v1
+#        with:
+#          registry: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY_DR}}
+#          username: ${{secrets.OPENSHIFT_SA_USERNAME}}
+#          password: ${{secrets.OPENSHIFT_SA_PASSWORD_DR}}
+#
+#      # Push image jag-crdp-transmit-receiver to OpenShift Image stream - Calgary (OC GOLDDR)
+#      - name: Push Image jag-crdp-transmit-receiver to Openshift Image Stream - Calgary (OC GOLDDR)
+#        env:
+#          IMAGE: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY_DR}}/${{secrets.OPENSHIFT_TOOLS_NAMESPACE}}/${{github.event.inputs.app}}:${{secrets.OPENSHIFT_ENV_TAG}}
+#        run: |
+#          docker tag ${{github.event.inputs.app1}}:${{env.gitsha}} ${IMAGE}
+#          docker push ${IMAGE}
+#
+#      # Push image jag-crdp-transmit-sender to OpenShift Image stream - Calgary (OC GOLDDR)
+#      - name: Push Image jag-crdp-transmit-sender to Openshift Image Stream - Calgary (OC GOLDDR)
+#        env:
+#          IMAGE: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY_DR}}/${{secrets.OPENSHIFT_TOOLS_NAMESPACE}}/${{github.event.inputs.app}}:${{secrets.OPENSHIFT_ENV_TAG}}
+#        run: |
+#          docker tag ${{github.event.inputs.app2}}:${{env.gitsha}} ${IMAGE}
+#          docker push ${IMAGE}
+#
+#      # Push image jag-crdp-process-scanner to OpenShift Image stream - Calgary (OC GOLDDR)
+#      - name: Push Image jag-crdp-process-scanner to Openshift Image Stream - Calgary (OC GOLDDR)
+#        env:
+#          IMAGE: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY_DR}}/${{secrets.OPENSHIFT_TOOLS_NAMESPACE}}/${{github.event.inputs.app}}:${{secrets.OPENSHIFT_ENV_TAG}}
+#        run: |
+#          docker tag ${{github.event.inputs.app3}}:${{env.gitsha}} ${IMAGE}
+#          docker push ${IMAGE}
+#
+#      # Push image jag-crdp-process-transformer to OpenShift Image stream - Calgary (OC GOLDDR)
+#      - name: Push Image jag-crdp-process-transformer to Openshift Image Stream - Calgary (OC GOLDDR)
+#        env:
+#          IMAGE: ${{secrets.OPENSHIFT_EXTERNAL_REPOSITORY_DR}}/${{secrets.OPENSHIFT_TOOLS_NAMESPACE}}/${{github.event.inputs.app}}:${{secrets.OPENSHIFT_ENV_TAG}}
+#        run: |
+#          docker tag ${{github.event.inputs.app4}}:${{env.gitsha}} ${IMAGE}
+#          docker push ${IMAGE}
+      
+      # Login to Openshift using OC SA and Token of respective env. for Pod labelling - Kamloops (OC GOLD)
+      - name: Authenticate OC Env Specific SA - Kamloops (OC GOLD)
         uses: redhat-actions/oc-login@v1
         env:
           OPENSHIFT_NAMESPACE: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
@@ -123,47 +210,149 @@ jobs:
           openshift_token: ${{secrets.OPENSHIFT_SA_ENV_DEPLOYER_TOKEN}}
           namespace: ${OPENSHIFT_NAMESPACE}
 
-        # Labels the deployment config of the application with release version number to spin up the pods labelled in same version - Kamloops (OC PROD)
-      - name: Labelling DC to release version - Kamloops (OC PROD)
+      # Labels the deployment config of the application jag-crdp-transmit-receiver with release version number to spin up the pods labelled in same version - Kamloops (OC GOLD)
+      - name: Labelling DC of jag-crdp-transmit-receiver to release version - Kamloops (OC GOLD)
         env:
           releaseVersion: ${{ env.releaseVersion }}
-          appName: ${{ github.event.inputs.app }}
+          appName: ${{ github.event.inputs.app1 }}
           openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
         run: |
           oc patch dc ${appName} -n ${openshiftEnvNamespace} --patch '{"spec":{"template":{"metadata":{"labels":{"version":"${{ env.releaseVersion }}.${{ env.gitsha }}"}}}}}'
 
-      # Wait to DC rollout to get completed before proceeding next stage - Kamloops (OC PROD)
-      - name: Wait for DC rollout - Kamloops (OC PROD)
+      # Wait to DC rollout of jag-crdp-transmit-receiver to get completed before proceeding next stage - Kamloops (OC GOLD)
+      - name: Wait for DC rollout of jag-crdp-transmit-receiver - Kamloops (OC GOLD)
         env:
-          appName: ${{ github.event.inputs.app }}
+          appName: ${{ github.event.inputs.app1 }}
           openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
         run: |
           oc rollout status -n ${openshiftEnvNamespace} dc/${appName} --watch
 
-      #Login to Openshift using OC SA and Token of respective env. for Pod labelling - Calgary (OC DR)
-      - name: Authenticate OC Env Specific SA - Calgary (OC DR)
-        uses: redhat-actions/oc-login@v1
-        env:
-          OPENSHIFT_NAMESPACE: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
-          OPENSHIFT_USER: ${{secrets.OPENSHIFT_SA_Env_DEPLOYER_NAME}}
-        with:
-          openshift_server_url: ${{secrets.OPENSHIFT_SERVER_URL_DR}}
-          openshift_token: ${{secrets.OPENSHIFT_SA_ENV_DEPLOYER_TOKEN_DR}}
-          namespace: ${OPENSHIFT_NAMESPACE}
-
-        # Labels the deployment config of the application with release version number to spin up the pods labelled in same version - Calgary (OC DR)
-      - name: Labelling DC to release version - Calgary (OC DR)
+      # Labels the deployment config of the application of jag-crdp-transmit-sender with release version number to spin up the pods labelled in same version - Kamloops (OC GOLD)
+      - name: Labelling DC of jag-crdp-transmit-sender to release version - Kamloops (OC GOLD)
         env:
           releaseVersion: ${{ env.releaseVersion }}
-          appName: ${{ github.event.inputs.app }}
+          appName: ${{ github.event.inputs.app2 }}
           openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
         run: |
           oc patch dc ${appName} -n ${openshiftEnvNamespace} --patch '{"spec":{"template":{"metadata":{"labels":{"version":"${{ env.releaseVersion }}.${{ env.gitsha }}"}}}}}'
 
-      # Wait to DC rollout to get completed before proceeding next stage - Calgary (OC DR)
-      - name: Wait for DC rollout - Calgary (OC DR)
+      # Wait to DC rollout of jag-crdp-transmit-sender to get completed before proceeding next stage - Kamloops (OC GOLD)
+      - name: Wait for DC rollout of jag-crdp-transmit-sender - Kamloops (OC GOLD)
         env:
-          appName: ${{ github.event.inputs.app }}
+          appName: ${{ github.event.inputs.app2 }}
           openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
         run: |
           oc rollout status -n ${openshiftEnvNamespace} dc/${appName} --watch
+
+      # Labels the deployment config of the application of jag-crdp-process-scanner with release version number to spin up the pods labelled in same version - Kamloops (OC GOLD)
+      - name: Labelling DC of jag-crdp-process-scanner to release version - Kamloops (OC GOLD)
+        env:
+          releaseVersion: ${{ env.releaseVersion }}
+          appName: ${{ github.event.inputs.app3 }}
+          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+        run: |
+          oc patch dc ${appName} -n ${openshiftEnvNamespace} --patch '{"spec":{"template":{"metadata":{"labels":{"version":"${{ env.releaseVersion }}.${{ env.gitsha }}"}}}}}'
+
+      # Wait to DC rollout of jag-crdp-process-scanner to get completed before proceeding next stage - Kamloops (OC GOLD)
+      - name: Wait for DC rollout of jag-crdp-process-scanner - Kamloops (OC GOLD)
+        env:
+          appName: ${{ github.event.inputs.app3 }}
+          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+        run: |
+          oc rollout status -n ${openshiftEnvNamespace} dc/${appName} --watch
+
+      # Labels the deployment config of the application of jag-crdp-process-transformer with release version number to spin up the pods labelled in same version - Kamloops (OC GOLD)
+      - name: Labelling DC of jag-crdp-process-transformer to release version - Kamloops (OC GOLD)
+        env:
+          releaseVersion: ${{ env.releaseVersion }}
+          appName: ${{ github.event.inputs.app4 }}
+          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+        run: |
+          oc patch dc ${appName} -n ${openshiftEnvNamespace} --patch '{"spec":{"template":{"metadata":{"labels":{"version":"${{ env.releaseVersion }}.${{ env.gitsha }}"}}}}}'
+
+      # Wait to DC rollout of jag-crdp-process-transformer to get completed before proceeding next stage - Kamloops (OC GOLD)
+      - name: Wait for DC rollout of jag-crdp-process-transformer - Kamloops (OC GOLD)
+        env:
+          appName: ${{ github.event.inputs.app4 }}
+          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+        run: |
+          oc rollout status -n ${openshiftEnvNamespace} dc/${appName} --watch
+
+#      # Login to Openshift using OC SA and Token of respective env. for Pod labelling - Calgary (OC GOLDDR)
+#      - name: Authenticate OC Env Specific SA - Calgary (OC GOLDDR)
+#        uses: redhat-actions/oc-login@v1
+#        env:
+#          OPENSHIFT_NAMESPACE: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+#          OPENSHIFT_USER: ${{secrets.OPENSHIFT_SA_Env_DEPLOYER_NAME}}
+#        with:
+#          openshift_server_url: ${{secrets.OPENSHIFT_SERVER_URL_DR}}
+#          openshift_token: ${{secrets.OPENSHIFT_SA_ENV_DEPLOYER_TOKEN_DR}}
+#          namespace: ${OPENSHIFT_NAMESPACE}
+#
+#      # Labels the deployment config of the application of jag-crdp-transmit-receiver with release version number to spin up the pods labelled in same version - Calgary (OC DR)
+#      - name: Labelling DC of jag-crdp-transmit-receiver to release version - Calgary (OC GOLDDR)
+#        env:
+#          releaseVersion: ${{ env.releaseVersion }}
+#          appName: ${{ github.event.inputs.app1 }}
+#          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+#        run: |
+#          oc patch dc ${appName} -n ${openshiftEnvNamespace} --patch '{"spec":{"template":{"metadata":{"labels":{"version":"${{ env.releaseVersion }}.${{ env.gitsha }}"}}}}}'
+#
+#      # Wait to DC rollout of jag-crdp-transmit-receiver to get completed before proceeding next stage - Calgary (OC GOLDDR)
+#      - name: Wait for DC rollout of jag-crdp-transmit-receiver - Calgary (OC GOLDDR)
+#        env:
+#          appName: ${{ github.event.inputs.app1 }}
+#          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+#        run: |
+#          oc rollout status -n ${openshiftEnvNamespace} dc/${appName} --watch
+#
+#      # Labels the deployment config of the application of jag-crdp-transmit-sender with release version number to spin up the pods labelled in same version - Calgary (OC DR)
+#      - name: Labelling DC of jag-crdp-transmit-sender to release version - Calgary (OC GOLDDR)
+#        env:
+#          releaseVersion: ${{ env.releaseVersion }}
+#          appName: ${{ github.event.inputs.app2 }}
+#          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+#        run: |
+#          oc patch dc ${appName} -n ${openshiftEnvNamespace} --patch '{"spec":{"template":{"metadata":{"labels":{"version":"${{ env.releaseVersion }}.${{ env.gitsha }}"}}}}}'
+#
+#      # Wait to DC rollout of jag-crdp-transmit-sender to get completed before proceeding next stage - Calgary (OC GOLDDR)
+#      - name: Wait for DC rollout of jag-crdp-transmit-sender - Calgary (OC GOLDDR)
+#        env:
+#          appName: ${{ github.event.inputs.app2 }}
+#          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+#        run: |
+#          oc rollout status -n ${openshiftEnvNamespace} dc/${appName} --watch
+#
+#      # Labels the deployment config of the application of jag-crdp-process-scanner with release version number to spin up the pods labelled in same version - Calgary (OC DR)
+#      - name: Labelling DC of jag-crdp-process-scanner to release version - Calgary (OC GOLDDR)
+#        env:
+#          releaseVersion: ${{ env.releaseVersion }}
+#          appName: ${{ github.event.inputs.app3 }}
+#          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+#        run: |
+#          oc patch dc ${appName} -n ${openshiftEnvNamespace} --patch '{"spec":{"template":{"metadata":{"labels":{"version":"${{ env.releaseVersion }}.${{ env.gitsha }}"}}}}}'
+#
+#      # Wait to DC rollout of jag-crdp-process-scanner to get completed before proceeding next stage - Calgary (OC GOLDDR)
+#      - name: Wait for DC rollout of jag-crdp-process-scanner - Calgary (OC GOLDDR)
+#        env:
+#          appName: ${{ github.event.inputs.app3 }}
+#          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+#        run: |
+#          oc rollout status -n ${openshiftEnvNamespace} dc/${appName} --watch
+#
+#      # Labels the deployment config of the application of jag-crdp-process-transformer with release version number to spin up the pods labelled in same version - Calgary (OC DR)
+#      - name: Labelling DC of jag-crdp-process-transformer to release version - Calgary (OC GOLDDR)
+#        env:
+#          releaseVersion: ${{ env.releaseVersion }}
+#          appName: ${{ github.event.inputs.app4 }}
+#          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+#        run: |
+#          oc patch dc ${appName} -n ${openshiftEnvNamespace} --patch '{"spec":{"template":{"metadata":{"labels":{"version":"${{ env.releaseVersion }}.${{ env.gitsha }}"}}}}}'
+#
+#      # Wait to DC rollout of jag-crdp-process-transformer to get completed before proceeding next stage - Calgary (OC GOLDDR)
+#      - name: Wait for DC rollout of jag-crdp-process-transformer - Calgary (OC GOLDDR)
+#        env:
+#          appName: ${{ github.event.inputs.app4 }}
+#          openshiftEnvNamespace: ${{secrets.OPENSHIFT_LICENSE_PLATE}}-${{ github.event.inputs.env }}
+#        run: |
+#          oc rollout status -n ${openshiftEnvNamespace} dc/${appName} --watch

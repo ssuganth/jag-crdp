@@ -1,18 +1,19 @@
 package ca.bc.gov.open.crdp.process.scanner.services;
 
 import ca.bc.gov.open.crdp.models.MqErrorLog;
+import ca.bc.gov.open.crdp.process.models.ScannerPub;
 import ca.bc.gov.open.crdp.process.scanner.configuration.QueueConfig;
+import ca.bc.gov.open.sftp.starter.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -33,6 +34,13 @@ public class ScannerService {
     @Value("${crdp.in-progress-dir}")
     private String inProgressDir = "/";
 
+    @Value("${crdp.record-ttl-hour}")
+    private int recordTTLHour = 24;
+
+    @Autowired JschSessionProvider jschSessionProvider;
+    private FileService fileService;
+    private final SftpProperties sftpProperties;
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RabbitTemplate rabbitTemplate;
@@ -41,7 +49,6 @@ public class ScannerService {
     private final Queue scannerQueue;
     private final QueueConfig queueConfig;
 
-    private static List<String> headFolderList = new ArrayList<String>();
     private static String
             processFolderName; // current "Processed_yyyy_nn" folder name (not full path).
 
@@ -58,37 +65,41 @@ public class ScannerService {
             QueueConfig queueConfig,
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
-            RabbitTemplate rabbitTemplate) {
+            RabbitTemplate rabbitTemplate,
+            SftpProperties sftpProperties) {
         this.scannerQueue = scannerQueue;
         this.amqpAdmin = amqpAdmin;
         this.queueConfig = queueConfig;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.rabbitTemplate = rabbitTemplate;
+        this.sftpProperties = sftpProperties;
     }
 
     /** The primary method for the Java service to scan CRDP directory */
     @Scheduled(cron = "${crdp.cron-job-incoming-file}")
     public void CRDPScanner() {
+        fileService =
+                false
+                        ? new SftpServiceImpl(jschSessionProvider, sftpProperties)
+                        : new LocalFileImpl();
+
         // re-initialize arrays
-        headFolderList = new ArrayList<String>();
         inProgressFilesToMove = new TreeMap<String, String>();
         inProgressFoldersToMove = new TreeMap<String, String>();
 
         LocalDateTime scanDateTime = LocalDateTime.now();
 
         // File object
-        File mainDir = new File(inFileDir);
+        fileService.makeFolder(inFileDir);
 
-        if (mainDir.exists() && mainDir.isDirectory()) {
+        if (fileService.exists(inFileDir) && fileService.isDirectory(inFileDir)) {
             // create inProgress folder
-            File inProDir = new File(inProgressDir);
-            if (!inProDir.exists()) {
-                inProDir.mkdir();
+            if (!fileService.exists(inProgressDir)) {
+                fileService.makeFolder(inProgressDir);
             }
 
-            // array for files and sub-directories of directory pointed by mainDir
-            File arr[] = mainDir.listFiles();
+            String[] arr = fileService.listFiles(inFileDir).toArray(new String[0]);
 
             // Calling recursive method
             try {
@@ -98,103 +109,83 @@ public class ScannerService {
             }
 
             if (inProgressFilesToMove.isEmpty() && inProgressFoldersToMove.isEmpty()) {
-                log.info("No file/fold found, end current scan session: " + scanDateTime);
+                log.info("No file/fold found, closing current scan session: " + scanDateTime);
                 return;
             }
 
             try {
-                // enqueue a timestamp of current scan
-                enQueue("scanning time:" + customFormatter.format(scanDateTime));
-
                 // move files into in-progress folder
                 for (Entry<String, String> m : inProgressFilesToMove.entrySet()) {
-                    File f = new File(m.getKey());
-                    move(f, m.getValue());
-                    enQueue(m.getValue() + f.getName());
+                    fileService.moveFile(m.getKey(), m.getValue());
+                    enQueue(new ScannerPub(m.getValue(), customFormatter.format(scanDateTime)));
                 }
 
                 for (Entry<String, String> m : inProgressFoldersToMove.entrySet()) {
-                    move(new File(m.getKey()), m.getValue());
-                    enQueue(m.getValue());
+                    fileService.moveFile(m.getKey(), m.getValue());
+                    enQueue(new ScannerPub(m.getValue(), customFormatter.format(scanDateTime)));
                 }
-                cleanUp(inFileDir, headFolderList);
+                cleanUp(inFileDir);
                 log.info("Scan Complete");
             } catch (Exception e) {
                 log.error(e.getMessage());
             }
+        } else {
+            log.error("Incoming file directory \"" + inFileDir + "\" does not exist");
         }
     }
 
-    private static void cleanUp(String headFolderPath, List<String> headFolderList) {
+    private void cleanUp(String headFolderPath) {
         // delete processed folders (delivered from Ottawa).
-        for (int i = 0; i < headFolderList.size(); i++) {
-            if (headFolderList.get(i).equals("inProgress")
-                    || headFolderList.get(i).equals("Errors")
-                    || headFolderList.get(i).equals("Completed")) {
+        for (var folder : fileService.listFiles(headFolderPath)) {
+            if (!fileService.isDirectory(folder) || getFileName(folder).equals("inProgress")) {
                 continue;
             }
-            removeFolderSvc(headFolderPath + "/" + headFolderList.get(i));
-        }
-        // Todo:
-        // clean out 'Completed' and 'Errors' folder.
-        // removeFolderSvc(headFolderPath + "/processed");
-        // makeFolderSvc(headFolderPath + "/processed");
-    }
 
-    /** The primary method for the Java service to create a folder */
-    public static final void makeFolderSvc(String folderPath) {
-        File target = new File(folderPath);
-        // The folderPath must IN a folder owned by wmadmin OR be in a folder with o-rwx permissions
-        // set.
-        try {
-            FileUtils.forceMkdir(target);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /** The primary method for the Java service to delete a folder */
-    public static final void removeFolderSvc(String folderPath) {
-        // The folderPath must be owned by wmadmin OR have o-rwx permissions set.
-        File target = new File(folderPath);
-        try {
-            if (target.exists()) {
-                FileUtils.deleteDirectory(target);
+            if (getFileName(folder).equals("Errors") || getFileName(folder).equals("Completed")) {
+                for (var f : fileService.listFiles(folder)) {
+                    if (new Date().getTime() - fileService.lastModify(f)
+                            > recordTTLHour * 60 * 60 * 1000) {
+                        fileService.removeFolder(f);
+                    }
+                }
+                continue;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            fileService.removeFolder(folder);
         }
     }
 
-    private void recursiveScan(File[] arr, int index, int level) throws IOException {
+    private void recursiveScan(String[] arr, int index, int level) throws IOException {
         // terminate condition
         if (index == arr.length) return;
         try {
             // for root folder files (Audit and Status).
-            if (arr[index].isFile()) {
-                inProgressFilesToMove.put(arr[index].getCanonicalPath(), inProgressDir);
+            if (!fileService.isDirectory(arr[index])) {
+                inProgressFilesToMove.put(
+                        arr[index], inProgressDir + Paths.get(arr[index]).getFileName().toString());
             }
 
             // for sub-directories
-            if (arr[index].isDirectory()) {
+            if (fileService.isDirectory(arr[index])) {
                 // Retain the name of the current process folder short name
                 // and add to list for deletion at the end of processing.
-                if (isProcessedFolder(arr[index].getName())) {
-                    processFolderName = arr[index].getName();
-                    headFolderList.add(processFolderName);
+                if (isProcessedFolder(getFileName(arr[index]))) {
+                    processFolderName = getFileName(arr[index]);
                 }
-                if (isProcessedFolder(arr[index].getName())
-                        || isProcessedSubFolder(arr[index].getName())) {
-                    if ("CCs".equals(arr[index].getName())
-                            || "Letters".equals(arr[index].getName())
-                            || "R-Lists".equals(arr[index].getName())
-                            || "JUS178s".equals(arr[index].getName())) {
+                if (isProcessedFolder(getFileName(arr[index]))
+                        || isProcessedSubFolder(getFileName(arr[index]))) {
+                    if ("CCs".equals(getFileName(arr[index]))
+                            || "Letters".equals(getFileName(arr[index]))
+                            || "R-Lists".equals(getFileName(arr[index]))
+                            || "JUS178s".equals(getFileName(arr[index]))) {
                         inProgressFoldersToMove.put(
-                                arr[index].getCanonicalPath(),
-                                inProgressDir + processFolderName + "/" + arr[index].getName());
+                                arr[index],
+                                inProgressDir + processFolderName + "/" + getFileName(arr[index]));
                     } else {
                         // recursion for sub-directories
-                        recursiveScan(arr[index].listFiles(), 0, level + 1);
+                        recursiveScan(
+                                fileService.listFiles(arr[index]).toArray(new String[0]),
+                                0,
+                                level + 1);
                     }
                 }
             }
@@ -223,58 +214,31 @@ public class ScannerService {
         else return false;
     }
 
-    private static void move(File file, String targetFolder) throws Exception {
-        try {
-            if (file.isFile()) {
-                // move single file
-                moveFileSvc(file.getCanonicalPath(), targetFolder);
-            } else {
-                // move single folder
-                moveFolderSvc(file.getCanonicalPath(), targetFolder);
-            }
-        } catch (Exception e) {
-            throw new Exception("An error was caught moving a file or folder to " + targetFolder);
-        }
-    }
-
-    private void enQueue(String filePath) throws JsonProcessingException {
+    private void enQueue(ScannerPub pub) throws JsonProcessingException {
         try {
             this.rabbitTemplate.convertAndSend(
-                    queueConfig.getTopicExchangeName(),
-                    queueConfig.getScannerRoutingkey(),
-                    filePath);
+                    queueConfig.getTopicExchangeName(), queueConfig.getScannerRoutingkey(), pub);
         } catch (Exception ex) {
             log.error(
                     objectMapper.writeValueAsString(
                             new MqErrorLog(
-                                    "Enqueue failed", "RecursiveScan", ex.getMessage(), filePath)));
+                                    "Enqueue failed",
+                                    "RecursiveScan",
+                                    ex.getMessage(),
+                                    pub.getFilePath())));
         }
     }
 
-    /** The primary method for the Java service to move a single file */
-    public static final void moveFileSvc(String filePath, String targetFolder) {
-        // The filePath and targetFolder must be owned by wmadmin
-        // OR have o-rwx permissions set.
-        File source = new File(filePath);
-        File destFolder = new File(targetFolder);
-
-        try {
-            FileUtils.moveFileToDirectory(source, destFolder, false);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /** The primary method for the Java service to move a single folder */
-    public static final void moveFolderSvc(String folderPath, String targetFolderPath) {
-        // The folderPath must be owned by wmadmin OR have o-rwx permissions set.
-        File source = new File(folderPath);
-        File dest = new File(targetFolderPath);
-        try {
-            FileUtils.copyDirectory(source, dest);
-            FileUtils.deleteDirectory(source);
-        } catch (IOException e) {
-            e.printStackTrace();
+    private static String getFileName(String filePath) {
+        if (filePath.contains("\\") && !filePath.contains("/")) {
+            // Windows path
+            return filePath.substring(filePath.lastIndexOf("\\") + 1);
+        } else if (filePath.contains("/") && !filePath.contains("\\")) {
+            // Linux path
+            return filePath.substring(filePath.lastIndexOf("/") + 1);
+        } else {
+            log.warn("Invalid file path: " + filePath);
+            return filePath;
         }
     }
 }

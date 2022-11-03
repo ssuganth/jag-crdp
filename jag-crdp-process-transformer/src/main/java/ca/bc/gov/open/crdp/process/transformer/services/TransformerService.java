@@ -4,6 +4,7 @@ import ca.bc.gov.open.crdp.exceptions.ORDSException;
 import ca.bc.gov.open.crdp.models.OrdsErrorLog;
 import ca.bc.gov.open.crdp.models.RequestSuccessLog;
 import ca.bc.gov.open.crdp.process.models.*;
+import ca.bc.gov.open.sftp.starter.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -23,7 +24,6 @@ import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,11 +53,12 @@ public class TransformerService {
 
     private String timestamp = null;
 
+    @Autowired JschSessionProvider jschSessionProvider;
+    private FileService fileService;
+    private final SftpProperties sftpProperties;
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    private static String
-            processFolderName; // current "Processed_yyyy_nn" folder name (not full path).
 
     private static TreeMap<String, String> completedFilesToMove =
             new TreeMap<String, String>(); // completed files.
@@ -81,121 +82,112 @@ public class TransformerService {
     DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
 
     @Autowired
-    public TransformerService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public TransformerService(
+            RestTemplate restTemplate, ObjectMapper objectMapper, SftpProperties sftpProperties) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.sftpProperties = sftpProperties;
     }
 
-    public void recordScanningTime(String timestamp) {
-        this.timestamp = timestamp;
-    }
+    public void processFileService(ScannerPub pub) {
+        fileService =
+                false
+                        ? new SftpServiceImpl(jschSessionProvider, sftpProperties)
+                        : new LocalFileImpl();
 
-    public void processFile(String fileName) {
         // re-initialize arrays. Failing to do this can result in unpredictable results.
         completedFilesToMove = new TreeMap<String, String>(); // completed files.
         erredFilesToMove = new TreeMap<String, String>(); // erred files.
         completedFoldersToMove = new TreeMap<String, String>(); // completed folders.
         erredFoldersToMove = new TreeMap<String, String>(); // erred folders.
 
+        this.timestamp = pub.getDateTime();
+
         // File object
-        File mainDir = new File(inProgressDir);
+        fileService.makeFolder(inProgressDir);
 
-        if (mainDir.exists() && mainDir.isDirectory()) {
+        if (fileService.exists(inProgressDir) && fileService.isDirectory(inProgressDir)) {
             // create Completed folder
-            File compDir = new File(completedDir);
-            if (!compDir.exists()) {
-                compDir.mkdir();
+            if (!fileService.exists(completedDir)) {
+                fileService.makeFolder(completedDir);
             }
-            File compTimestampDir = new File(completedDir + timestamp);
-            if (!compTimestampDir.exists()) {
-                compTimestampDir.mkdir();
+            // create completed folder with last scanning timestamp
+            if (!fileService.exists(completedDir + timestamp)) {
+                fileService.makeFolder(completedDir + timestamp);
             }
-
             // create Errors folder
-            File errDir = new File(errorsDir);
-            if (!errDir.exists()) {
-                errDir.mkdir();
+            if (!fileService.exists(errorsDir)) {
+                fileService.makeFolder(errorsDir);
             }
-            File errTimestampDir = new File(errorsDir + timestamp);
-            if (!errTimestampDir.exists()) {
-                errTimestampDir.mkdir();
+            // create errors folder with last scanning timestamp
+            if (!fileService.exists(errorsDir + timestamp)) {
+                fileService.makeFolder(errorsDir + timestamp);
             }
 
-            File file = new File(fileName);
-            if (file.isFile()) {
+            if (!fileService.isDirectory(pub.getFilePath())) {
                 // process files
-                processFile(file);
+                processFile(pub.getFilePath());
             } else {
                 // process folders
-                processFolder(file);
+                processFolder(pub.getFilePath());
             }
 
             try {
                 for (Map.Entry<String, String> m : completedFilesToMove.entrySet()) {
-                    File f = new File(m.getKey());
-                    move(f, m.getValue());
+                    fileService.moveFile(m.getKey(), m.getValue());
                 }
 
                 for (Map.Entry<String, String> m : completedFoldersToMove.entrySet()) {
-                    move(new File(m.getKey()), m.getValue());
+                    fileService.moveFile(m.getKey(), m.getValue());
                 }
 
                 for (Map.Entry<String, String> m : erredFilesToMove.entrySet()) {
-                    File f = new File(m.getKey());
-                    move(f, m.getValue());
+                    fileService.moveFile(m.getKey(), m.getValue());
                 }
 
                 for (Map.Entry<String, String> m : erredFoldersToMove.entrySet()) {
-                    move(new File(m.getKey()), m.getValue());
+                    fileService.moveFile(m.getKey(), m.getValue());
                 }
                 cleanUp(inProgressDir);
             } catch (Exception e) {
                 log.error(e.getMessage());
             }
         } else {
-            log.error("InProgress directory \"" + mainDir + "\" does not exist");
+            log.error("InProgress directory \"" + inProgressDir + "\" does not exist");
         }
     }
 
-    private static void cleanUp(String inProgressDir) {
-        File dir = new File(inProgressDir);
-        File[] fileList = dir.listFiles();
-        for (var f : fileList) {
-            if (f.listFiles() != null && f.listFiles().length == 0) {
-                removeFolderSvc(f.getAbsolutePath());
+    private void cleanUp(String inProgressDir) {
+        for (var f : fileService.listFiles(inProgressDir)) {
+            if (fileService.isDirectory(f) && fileService.listFiles(f).size() == 0) {
+                fileService.removeFolder(f);
             }
         }
     }
 
-    private void processFile(File file) {
-        String fileName = null;
-        try {
-            fileName = file.getCanonicalPath();
-        } catch (IOException e1) {
-            log.error(e1.getMessage());
-        }
-
+    private void processFile(String filePath) {
         String auditRegex = "^[A-Za-z]{4}O_Audit.\\d{6}.XML"; // ^[A-Z]{4}O_Audit.\d{6}.XML
         String statusRegex = "^[A-Za-z]{4}O_Status.\\d{6}.XML"; // ^[A-Z]{4}O_Status.\d{6}.XML
         boolean move = false;
 
         try {
-            if (Pattern.matches(auditRegex, file.getName())) {
-                processAuditSvc(fileName);
+            if (Pattern.matches(auditRegex, getFileName(filePath))) {
+                processAuditSvc(filePath);
                 move = true;
 
-            } else if (Pattern.matches(statusRegex, file.getName())) {
-                processStatusSvc(fileName);
+            } else if (Pattern.matches(statusRegex, getFileName(filePath))) {
+                processStatusSvc(filePath);
                 move = true;
             }
 
             // Move file to 'completed' folder on success (status or audit only)
             if (move) {
-                completedFilesToMove.put(file.getAbsolutePath(), completedDir + timestamp + "\\");
+                completedFilesToMove.put(
+                        filePath, completedDir + timestamp + "/" + getFileName(filePath));
             }
 
         } catch (Exception e) {
-            erredFilesToMove.put(file.getAbsolutePath(), errorsDir + timestamp + "\\");
+            erredFilesToMove.put(filePath, errorsDir + timestamp + "/" + getFileName(filePath));
         }
     }
 
@@ -334,26 +326,25 @@ public class TransformerService {
         }
     }
 
-    private void processFolder(File folderPath) {
+    private void processFolder(String folderPath) {
         // Extract date from Processed folderName to pass service as 'processedDate'.
         Pattern p = Pattern.compile("\\bProcessed_\\w+[-][0-9][0-9][-][0-9][0-9]");
-        Matcher m = p.matcher(folderPath.toString());
+        Matcher m = p.matcher(folderPath);
         String processedDate = null;
         if (m.find()) {
             processedDate = m.group().substring("Processed_".length());
         }
 
         try {
-            switch (folderPath.getName()) {
+            switch (getFileName(folderPath)) {
                 case "Letters":
                 case "CCs":
-                    processDocumentsSvc(
-                            folderPath.getCanonicalPath(), folderPath.getName(), processedDate);
+                    processDocumentsSvc(folderPath, getFileName(folderPath), processedDate);
                     break;
                 case "JUS178s":
                 case "R-Lists":
                     // folderShortName is not used in processReports
-                    processReportsSvc(folderPath.getCanonicalPath(), processedDate);
+                    processReportsSvc(folderPath, processedDate);
                     break;
                 default:
             }
@@ -361,15 +352,13 @@ public class TransformerService {
             // Add the processed folder and its target location to the processedFolders map
             // dealt with at the end of processing.
             completedFoldersToMove.put(
-                    folderPath.getAbsolutePath(),
-                    completedDir + timestamp + "\\" + folderPath.getName());
+                    folderPath, completedDir + timestamp + "/" + getFileName(folderPath));
 
         } catch (Exception e) {
             // Add the erred folder path and its target location to the erred folders map
             // dealt with at the end of processing.
             erredFoldersToMove.put(
-                    folderPath.getAbsolutePath(),
-                    errorsDir + timestamp + "\\" + folderPath.getName());
+                    folderPath, errorsDir + timestamp + "/" + getFileName(folderPath));
         }
     }
 
@@ -388,11 +377,11 @@ public class TransformerService {
         File xmlFile = null;
         if (folderShortName.equals("CCs")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_CCs.XML");
-            xmlFile = new File(folderName + "\\" + fileName);
+            xmlFile = new File(folderName + "/" + fileName);
             isValid = validateXml(ccSchemaPath, xmlFile);
         } else if (folderShortName.equals("Letters")) {
             fileName = extractXMLFileName(fileList, "^[A-Z]{4}O_Letters.XML");
-            xmlFile = new File(folderName + "\\" + fileName);
+            xmlFile = new File(folderName + "/" + fileName);
             isValid = validateXml(lettersSchemaPath, xmlFile);
         } else {
             log.error("Unexpected folder short name: " + folderShortName);
@@ -682,57 +671,16 @@ public class TransformerService {
         }
     }
 
-    /** The primary method for the Java service to delete a folder */
-    public static final void removeFolderSvc(String folderPath) {
-        // The folderPath must be owned by wmadmin OR have o-rwx permissions set.
-        File target = new File(folderPath);
-        try {
-            if (target.exists()) {
-                FileUtils.deleteDirectory(target);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static void move(File file, String targetFolder) throws Exception {
-        try {
-            if (file.isFile()) {
-                // move single file
-                moveFileSvc(file.getCanonicalPath(), targetFolder);
-            } else {
-                // move single folder
-                moveFolderSvc(file.getCanonicalPath(), targetFolder);
-            }
-        } catch (Exception e) {
-            throw new Exception("An error was caught moving a file or folder to " + targetFolder);
-        }
-    }
-
-    /** The primary method for the Java service to move a single file */
-    public static final void moveFileSvc(String filePath, String targetFolder) {
-        // The filePath and targetFolder must be owned by wmadmin
-        // OR have o-rwx permissions set.
-        File source = new File(filePath);
-        File destFolder = new File(targetFolder);
-
-        try {
-            FileUtils.moveFileToDirectory(source, destFolder, false);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /** The primary method for the Java service to move a single folder */
-    public static final void moveFolderSvc(String folderPath, String targetFolderPath) {
-        // The folderPath must be owned by wmadmin OR have o-rwx permissions set.
-        File source = new File(folderPath);
-        File dest = new File(targetFolderPath);
-        try {
-            FileUtils.copyDirectory(source, dest);
-            FileUtils.deleteDirectory(source);
-        } catch (IOException e) {
-            e.printStackTrace();
+    private static String getFileName(String filePath) {
+        if (filePath.contains("\\") && !filePath.contains("/")) {
+            // Windows path
+            return filePath.substring(filePath.lastIndexOf("\\") + 1);
+        } else if (filePath.contains("/") && !filePath.contains("\\")) {
+            // Linux path
+            return filePath.substring(filePath.lastIndexOf("/") + 1);
+        } else {
+            log.warn("Invalid file path: " + filePath);
+            return filePath;
         }
     }
 }

@@ -24,7 +24,6 @@ public class SftpProperties {
     @Value("${bcgov.sftp.ssh-private-key}")
     private String sshPrivateKey;
 
-    // Not Apply in ACS-SFEG
     private String sshPrivatePassphrase;
     private String password;
 
