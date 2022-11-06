@@ -36,6 +36,7 @@
         <logback.core.version>1.2.11</logback.core.version>
         <spring.starter.web.version>2.7.5</spring.starter.web.version>
         <spring.starter.web-services.version>2.7.4</spring.starter.web-services.version>
+        <spring-context.support.version>5.3.23</spring-context.support.version>
         <wsdl4j.version>1.6.3</wsdl4j.version>
         <jaxb-runtime.version>4.0.1</jaxb-runtime.version>
         <okhttp.version>4.9.3</okhttp.version>
@@ -49,7 +50,7 @@
         <jaxb2-commons.basics.version>1.11.1</jaxb2-commons.basics.version>
         <junit.version>4.13.2</junit.version>
         <spring.test.version>5.3.23</spring.test.version>
-        <spring.amqp.version>2.7.4</spring.amqp.version>
+        <spring.amqp.version>2.5.14</spring.amqp.version>
         <spring.rabbit.test.version>2.4.7</spring.rabbit.test.version>
     </properties>
 
@@ -160,6 +161,11 @@
                 <artifactId>lombok</artifactId>
                 <optional>true</optional>
                 <version>${lombok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-context-support</artifactId>
+                <version>${spring-context.support.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
