@@ -65,7 +65,6 @@
 
     <dependencyManagement>
         <dependencies>
-
             <!-- codegen -->
             <dependency>
                 <groupId>org.mapstruct</groupId>
@@ -311,7 +310,6 @@
                 <scope>test</scope>
                 <version>${spring.rabbit.test.version}</version>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
